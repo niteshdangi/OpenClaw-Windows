@@ -4,6 +4,7 @@ use crate::services::GatewayService;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::os::windows::process::CommandExt;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
@@ -441,7 +442,10 @@ async fn handle_system_which(
             continue;
         }
         // Simple check using 'where' on Windows
-        let output = std::process::Command::new("where").arg(bin_str).output();
+        let output = std::process::Command::new("where")
+            .arg(bin_str)
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .output();
         if let Ok(out) = output {
             if out.status.success() {
                 let path = String::from_utf8_lossy(&out.stdout)

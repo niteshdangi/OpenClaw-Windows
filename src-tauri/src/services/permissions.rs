@@ -1,5 +1,8 @@
 use serde::Serialize;
+use std::os::windows::process::CommandExt;
 use tauri::AppHandle;
+
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 /// Windows-specific capability names that map to Windows Settings pages.
 #[derive(Serialize, Debug, Clone)]
@@ -43,6 +46,7 @@ fn check_microphone_allowed() -> bool {
             "/v",
             "Value",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output();
     match output {
         Ok(out) => {
@@ -62,6 +66,7 @@ fn check_camera_allowed() -> bool {
             "/v",
             "Value",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output();
     match output {
         Ok(out) => {
@@ -81,6 +86,7 @@ fn check_speech_recognition_enabled() -> bool {
             "/v",
             "HasAccepted",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output();
     match output {
         Ok(out) => {
@@ -100,6 +106,7 @@ fn check_notifications_allowed() -> bool {
             "/v",
             "ToastEnabled",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output();
     match output {
         Ok(out) => {
@@ -119,6 +126,7 @@ fn check_location_allowed() -> bool {
             "/v",
             "Value",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output();
     match output {
         Ok(out) => {
@@ -147,6 +155,7 @@ pub async fn open_windows_permission(
 
     std::process::Command::new("explorer")
         .arg(uri)
+        .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map_err(|e| {
             crate::error::OpenClawError::Internal(format!("Failed to open Settings: {}", e))
