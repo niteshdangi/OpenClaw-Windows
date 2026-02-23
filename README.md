@@ -34,9 +34,12 @@
 
 For most users, we recommend downloading the latest installer:
 
-1. Go to the [Releases](https://github.com/nites/OpenClaw-Windows/releases) page.
+1. Go to the [Releases](https://github.com/niteshdangi/OpenClaw-Windows/releases) page.
 2. Download the `.msi` or `.exe` installer for the latest version.
 3. Run the installer and follow the on-screen instructions.
+
+> [!NOTE]
+> Once App's Gateway Setup is completed, App just minimises to System Tray from where App can be managed for Wake Word or PTT etc.
 
 ## 🛠 Local Development
 
@@ -66,26 +69,15 @@ If you want to build from source or contribute:
    npm run tauri dev
    ```
 
-## 🏗 Architecture
-
-The project follows a modern Tauri 2 architecture:
-
-- **Frontend**: React 19, TypeScript, Fluent UI, and XState for robust state management.
-- **Backend**: Rust services for hardware interaction, terminal management (PTY), and WSL communication.
-- **Communication**: Abstracted IPC hooks in `src/hooks` to minimize coupling between UI and backend logic.
-
 For detailed coding standards and agent policies, see [AGENTS.md](agents.md).
 
 ## 🤝 Contributing
 
-Contributions are welcome! We follow the parent project's philosophy: **AI/Vibe-coded PRs are first-class citizens**.
+Contributions are welcome!
+**AI/Vibe-coded PRs are first-class citizens**.
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-*Part of the [OpenClaw](https://openclaw.ai) ecosystem.*

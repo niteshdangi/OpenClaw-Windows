@@ -1,5 +1,3 @@
-use tracing::debug;
-
 use crate::error::OpenClawError;
 use std::os::windows::process::CommandExt;
 use std::process::{Command, Stdio};
@@ -85,26 +83,5 @@ impl WslProvider for RealWslProvider {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(OpenClawError::from)
-    }
-}
-
-pub fn warm_wsl_distro(provider: &dyn WslProvider) -> crate::error::Result<bool> {
-    let args_owned = vec![
-        "bash".to_string(),
-        "-c".to_string(),
-        "export PATH=\"$HOME/.npm-global/bin:$PATH\" && openclaw gateway".to_string(),
-    ];
-
-    let args: Vec<&str> = args_owned.iter().map(String::as_str).collect();
-
-    match provider.spawn_command(&args) {
-        Ok(_) => {
-            tracing::info!("WSL warm-up command spawned successfully");
-            Ok(true)
-        }
-        Err(e) => {
-            tracing::error!("Failed to spawn WSL warm-up command: {}", e);
-            Err(e)
-        }
     }
 }

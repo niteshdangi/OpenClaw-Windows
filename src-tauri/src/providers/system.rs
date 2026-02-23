@@ -40,6 +40,7 @@ impl SystemProvider for RealSystemProvider {
                 "/v",
                 "AccentColor",
             ])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .output()
             .ok()?;
 

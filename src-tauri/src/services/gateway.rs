@@ -592,6 +592,7 @@ impl GatewayService {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .spawn()
             .map_err(|e| {
                 crate::error::OpenClawError::Internal(format!(

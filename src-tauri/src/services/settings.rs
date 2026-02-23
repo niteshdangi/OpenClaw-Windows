@@ -257,30 +257,7 @@ pub async fn save_general_settings(
     let connection_changed = connection_profile_changed(&before, &after);
     let node_caps_changed = node_capability_profile_changed(&before, &after);
     let pause_changed = before.is_paused != after.is_paused;
-    let should_warm_wsl = after.gateway_mode == "local"
-        && after.start_on_login
-        && (!before.start_on_login || before.gateway_mode != "local");
     let gateway = app.state::<Arc<GatewayService>>().inner().clone();
-
-    if should_warm_wsl {
-        let provider = wsl_provider.inner().clone();
-        match tauri::async_runtime::spawn_blocking(move || {
-            crate::providers::wsl::warm_wsl_distro(provider.as_ref())
-        })
-        .await
-        {
-            Ok(Ok(true)) => tracing::info!("WSL warm-up completed after settings update"),
-            Ok(Ok(false)) => {
-                tracing::debug!("WSL warm-up skipped: no distro detected");
-            }
-            Ok(Err(err)) => {
-                tracing::warn!("WSL warm-up failed after settings update: {}", err);
-            }
-            Err(join_err) => {
-                tracing::warn!("WSL warm-up task join failed: {}", join_err);
-            }
-        }
-    }
 
     if pause_changed && after.is_paused {
         <GatewayService as BackgroundService>::stop(gateway.as_ref())
