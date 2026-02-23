@@ -104,6 +104,10 @@ pub fn run() {
                 gateway_service.clone(),
                 config_service.clone(),
             ));
+            let gateway_watcher_service = Arc::new(services::GatewayWatcherService::new(
+                config_service.clone(),
+                wsl_provider.clone(),
+            ));
 
             app.manage(wsl_provider.clone());
             app.manage(services::install_handlers::InstallerState(Arc::new(
@@ -119,6 +123,7 @@ pub fn run() {
             app.manage(talk_service.clone());
             app.manage(voice_wake_service.clone());
             app.manage(discovery_service.clone());
+            app.manage(gateway_watcher_service.clone());
 
             let runtime_manager = services::runtime::RuntimeManager::new(app.handle().clone());
 
@@ -127,6 +132,7 @@ pub fn run() {
             let rm3 = runtime_manager.clone();
             let rm4 = runtime_manager.clone();
             let rm5 = runtime_manager.clone();
+            let rm6 = runtime_manager.clone();
 
             tauri::async_runtime::block_on(async move {
                 let _ = rm.register(media_service).await;
@@ -136,6 +142,7 @@ pub fn run() {
                     .await;
                 let _ = rm4.register(gateway_service).await;
                 let _ = rm5.register(voice_wake_service).await;
+                let _ = rm6.register(gateway_watcher_service).await;
             });
 
             app.manage(runtime_manager);
@@ -178,20 +185,6 @@ pub fn run() {
             let startup_config = tauri::async_runtime::block_on(async {
                 config_service.load().await.ok()
             });
-            if let Some(cfg) = startup_config.as_ref() {
-                if cfg.start_on_login && cfg.gateway_mode == "local" {
-                    let provider = wsl_provider.clone();
-                    tauri::async_runtime::spawn_blocking(move || {
-                        match providers::wsl::warm_wsl_distro(provider.as_ref()) {
-                            Ok(true) => tracing::info!("WSL warm-up completed during startup"),
-                            Ok(false) => {
-                                tracing::debug!("WSL warm-up skipped during startup: no distro")
-                            }
-                            Err(err) => tracing::warn!("WSL warm-up failed during startup: {}", err),
-                        }
-                    });
-                }
-            }
             let is_setup_completed = startup_config
                 .as_ref()
                 .map(|c| c.is_setup_completed)
