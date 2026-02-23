@@ -1,45 +1,58 @@
 name: Release
 
 on:
-    push:
-        branches: [release]
+  push:
+    branches: [release]
+  workflow_dispatch:
 
 jobs:
-    publish:
-        permissions:
-            contents: write
-        strategy:
-            fail-fast: false
-            matrix:
-                platform: [windows-latest]
+  publish:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest]
 
-        runs-on: ${{ matrix.platform }}
-        steps:
-            - uses: actions/checkout@v4
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: setup node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-            - name: install Rust stable
-              uses: dtolnay/rust-toolchain@stable
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
 
-            - name: install dependencies (ubuntu only)
-              if: matrix.platform == 'ubuntu-22.04'
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
-            - name: install frontend dependencies
-              run: npm install
+      - name: install frontend dependencies
+        run: npm install
 
-            - uses: tauri-apps/tauri-action@v0
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tagName: v__VERSION__
-                  releaseName: "OpenClaw Windows v__VERSION__"
-                  releaseBody: "See the assets below to download the latest installer."
-                  releaseDraft: true
-                  prerelease: false
+      - name: decode windows certificate
+        if: matrix.platform == 'windows-latest' && env.WIN_CERTIFICATE != ''
+        env:
+          WIN_CERTIFICATE: ${{ secrets.WIN_CERTIFICATE }}
+        shell: pwsh
+        run: |
+          $certContent = $env:WIN_CERTIFICATE
+          [IO.File]::WriteAllBytes("$pwd/src-tauri/certificate.pfx", [Convert]::FromBase64String($certContent))
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "OpenClaw Windows v__VERSION__"
+          releaseBody: "Download the latest Windows companion for OpenClaw."
+          releaseDraft: true
+          prerelease: false
+          signWindows: ${{ secrets.WIN_CERTIFICATE != '' }}
+          windowCertificate: src-tauri/certificate.pfx
+          windowCertificatePassword: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
