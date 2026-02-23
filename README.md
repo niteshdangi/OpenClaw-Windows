@@ -16,15 +16,19 @@
 > [!NOTE]
 > **Unofficial Companion**: This is a community-maintained Windows client. It is not an official product of, nor is it affiliated with, the original OpenClaw authors.
 >
-> **OpenClaw Windows** is a desktop companion for the [OpenClaw](https://github.com/openclaw/openclaw) personal AI assistant. It provides system-level integrations for Windows users.
+> **Windows Companion to OpenClaw** provides system-level integrations for Windows users.
 
 ## ✨ Features
 
-- **WSL2 Integration**: Deep integration with Windows Subsystem for Linux for high-performance terminal operations.
-- **Voice Wake**: Native Windows speech recognition integration for hands-free interaction with Molty.
-- **System Permissions**: Managed access to your file system and terminal, secured by the [agents.md](agents.md) specification.
-- **IPC Abstraction**: Clean hook-based interaction between the React frontend and Rust backend.
-- **Modern UI**: Built with Fluent UI and React to feel right at home on Windows 11.
+### Capabilities Matrix
+
+| Feature | Description | Support |
+| :--- | :--- | :--- |
+| **Gateway Management** | Automatically installs or connects to existing Local (WSL/Native), Remote (SSH), or Direct WebSocket gateways. | ✅ |
+| **Node Commands** | Supports `system.run`, `system.which`, `system.notify`, `screen.record`, `camera.snap`, and `exec_approvals`. | ✅ |
+| **WSL2 Integration** | High-performance terminal and process management within the Linux subsystem. | ✅ |
+| **Voice Wake** | Native Windows speech recognition to wake Molty hands-free. | ✅ |
+| **Modern UI** | Built with Fluent UI & React, featuring Mica effects and always-on-top security prompts. | ✅ |
 
 ## ⬇️ Download & Install
 
