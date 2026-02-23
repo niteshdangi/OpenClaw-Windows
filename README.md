@@ -66,14 +66,6 @@ If you want to build from source or contribute:
    npm run tauri dev
    ```
 
-## 🏗 Architecture
-
-The project follows a modern Tauri 2 architecture:
-
-- **Frontend**: React 19, TypeScript, Fluent UI, and XState for robust state management.
-- **Backend**: Rust services for hardware interaction, terminal management (PTY), and WSL communication.
-- **Communication**: Abstracted IPC hooks in `src/hooks` to minimize coupling between UI and backend logic.
-
 For detailed coding standards and agent policies, see [AGENTS.md](agents.md).
 
 ## 🤝 Contributing
@@ -85,7 +77,3 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-*Part of the [OpenClaw](https://openclaw.ai) ecosystem.*
