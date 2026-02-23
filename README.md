@@ -70,7 +70,8 @@ For detailed coding standards and agent policies, see [AGENTS.md](agents.md).
 
 ## 🤝 Contributing
 
-Contributions are welcome! We follow the parent project's philosophy: **AI/Vibe-coded PRs are first-class citizens**.
+Contributions are welcome!
+**AI/Vibe-coded PRs are first-class citizens**.
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
