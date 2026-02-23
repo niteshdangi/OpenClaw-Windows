@@ -55,7 +55,7 @@ thiserror = "2.0.18"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-appender = "0.2"
-windows = { version = "0.62.2", features = ["Media_SpeechRecognition", "Foundation", "Foundation_Collections", "Globalization"] }
+windows = { version = "0.62.2", features = ["Media_SpeechRecognition", "Foundation", "Foundation_Collections", "Globalization", "Win32_System_Console"] }
 hostname = "0.3"
 subtle = "2"
 tauri-plugin-autostart = "2"
