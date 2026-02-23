@@ -38,6 +38,9 @@ For most users, we recommend downloading the latest installer:
 2. Download the `.msi` or `.exe` installer for the latest version.
 3. Run the installer and follow the on-screen instructions.
 
+> [!NOTE]
+> Once App's Gateway Setup is completed, App just minimises to System Tray from where App can be managed for Wake Word or PTT etc.
+
 ## 🛠 Local Development
 
 If you want to build from source or contribute:
