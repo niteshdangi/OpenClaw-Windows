@@ -34,7 +34,7 @@
 
 For most users, we recommend downloading the latest installer:
 
-1. Go to the [Releases](https://github.com/nites/OpenClaw-Windows/releases) page.
+1. Go to the [Releases](https://github.com/niteshdangi/OpenClaw-Windows/releases) page.
 2. Download the `.msi` or `.exe` installer for the latest version.
 3. Run the installer and follow the on-screen instructions.
 
