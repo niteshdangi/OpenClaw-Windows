@@ -1,6 +1,6 @@
 [package]
 name = "openclaw-windows"
-version = "0.1.0"
+version = "1.0.0"
 description = "Desktop companion app for OpenClaw on Windows"
 authors = ["Nitesh"]
 edition = "2021"
