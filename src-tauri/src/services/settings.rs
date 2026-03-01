@@ -1,5 +1,4 @@
 use crate::models::config::Config;
-use crate::providers::WslProvider;
 use crate::services::runtime::BackgroundService;
 use crate::services::ConfigService;
 use crate::services::GatewayService;
@@ -221,7 +220,6 @@ pub async fn get_full_config(
 pub async fn save_general_settings(
     payload: GeneralSettingsPayload,
     config_service: State<'_, Arc<ConfigService>>,
-    wsl_provider: State<'_, Arc<dyn WslProvider>>,
     app: tauri::AppHandle,
 ) -> crate::error::Result<()> {
     // Keep OS autostart state in sync with saved app config.

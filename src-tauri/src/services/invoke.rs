@@ -10,14 +10,6 @@ use tauri::{AppHandle, Manager};
 
 
 #[derive(Deserialize)]
-#[serde(untagged)]
-enum BoolOrString {
-    Bool(bool),
-    String(String),
-}
-
-
-#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct OpenClawSystemRunParams {
     command: Vec<String>,
@@ -26,8 +18,6 @@ struct OpenClawSystemRunParams {
     cwd: Option<String>,
     env: Option<HashMap<String, String>>,
     timeout_ms: Option<u64>,
-    #[allow(dead_code)]
-    needs_screen_recording: Option<BoolOrString>,
     agent_id: Option<String>,
     session_key: Option<String>,
     #[allow(dead_code)]

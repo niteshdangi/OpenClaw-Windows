@@ -9,7 +9,6 @@ use tauri::{AppHandle, Emitter, State};
 
 pub struct SystemService {
     provider: Arc<dyn SystemProvider>,
-    exec_approvals: Arc<crate::services::exec_approvals::ExecApprovalsService>,
     // Use std::sync::Mutex (not tokio) so it's safe to lock inside spawn_blocking.
     registry: Arc<std::sync::Mutex<HashMap<String, PtyHandle>>>,
 }
@@ -36,13 +35,9 @@ struct TerminalExit {
 }
 
 impl SystemService {
-    pub fn new(
-        provider: Arc<dyn SystemProvider>,
-        exec_approvals: Arc<crate::services::exec_approvals::ExecApprovalsService>,
-    ) -> Self {
+    pub fn new(provider: Arc<dyn SystemProvider>) -> Self {
         Self {
             provider,
-            exec_approvals,
             registry: Arc::new(std::sync::Mutex::new(HashMap::new())),
         }
     }
