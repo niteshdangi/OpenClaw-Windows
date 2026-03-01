@@ -15,7 +15,7 @@ We take the security of this project seriously. If you believe you have found a 
 
 **Do not open a public issue.** Instead, please follow these steps:
 
-1. Send an email to **REMOVED** with the subject "Security Vulnerability Report".
+1. [Open a GitHub Security Advisory](https://github.com/niteshdangi/OpenClaw-Windows/security/advisories/new) in this repository.
 2. Include a detailed description of the vulnerability, steps to reproduce, and the potential impact.
 3. Allow us reasonable time to investigate and resolve the issue before making any information public.
 
