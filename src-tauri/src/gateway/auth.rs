@@ -83,7 +83,7 @@ pub fn get_operator_connection_req(
             "maxProtocol": PROTOCOL_VERSION,
             "client": {
                 "id": client_id,
-                "version": "1.0.0",
+                "version": "1.0.1",
                 "platform": "windows",
                 "mode": "ui",
                 "displayName": "OpenClaw Windows"
@@ -152,7 +152,7 @@ pub fn get_node_connection_req(nonce: &str, config: &Config) -> anyhow::Result<s
             "maxProtocol": PROTOCOL_VERSION,
             "client": {
                 "id": client_id,
-                "version": "1.0.0",
+                "version": "1.0.1",
                 "platform": "windows",
                 "mode": "ui",
                 "displayName": "OpenClaw Windows"
