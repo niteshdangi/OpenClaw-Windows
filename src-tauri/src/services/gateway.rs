@@ -8,6 +8,7 @@ use rand::rngs::OsRng;
 use serde::Serialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::path::Path;
 use std::process::Stdio;
 use std::{sync::Arc, time::Duration};
 use tauri::{AppHandle, Manager};
@@ -536,6 +537,39 @@ impl GatewayService {
         Ok(port)
     }
 
+    /// Validate SSH key path before passing to ssh.exe
+    fn validate_ssh_key_path(key_path: &str) -> crate::error::Result<()> {
+        let path = Path::new(key_path);
+
+        if !path.exists() {
+            return Err(crate::error::OpenClawError::Internal(format!(
+                "SSH key file not found: {}",
+                key_path
+            )));
+        }
+
+        if !path.is_file() {
+            return Err(crate::error::OpenClawError::Internal(format!(
+                "SSH key path is not a file: {}",
+                key_path
+            )));
+        }
+
+        let canonical = path.canonicalize().map_err(|e| {
+            crate::error::OpenClawError::Internal(format!(
+                "Failed to resolve SSH key path '{}': {}",
+                key_path, e
+            ))
+        })?;
+
+        tracing::debug!(
+            "[GatewayService] SSH key path validation passed: {}",
+            canonical.display()
+        );
+
+        Ok(())
+    }
+
     async fn open_remote_ssh_tunnel(
         &self,
         config: &crate::models::config::Config,
@@ -572,6 +606,8 @@ impl GatewayService {
             .map(str::trim)
             .filter(|i| !i.is_empty())
         {
+            // Validate SSH key path before passing to ssh.exe
+            Self::validate_ssh_key_path(identity)?;
             args.push("-i".to_string());
             args.push(identity.to_string());
         }

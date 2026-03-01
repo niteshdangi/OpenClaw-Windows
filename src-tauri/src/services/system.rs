@@ -1,4 +1,4 @@
-use crate::error::OpenClawError;
+use crate::error::{OpenClawError, recover_mutex_poison};
 use crate::providers::system::{PtyHandle, SystemProvider};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -121,7 +121,8 @@ impl SystemService {
                     "[SystemService] Storing interaction handles for id: {}",
                     id_clone
                 );
-                let mut map = registry.lock().unwrap_or_else(|e| e.into_inner());
+                let mut map = registry.lock()
+                    .unwrap_or_else(|e| recover_mutex_poison(e, "terminal_registry_insert"));
                 map.insert(id_clone.clone(), pty);
             }
 
@@ -201,7 +202,8 @@ impl SystemService {
 
                 // Cleanup registry if it's still there.
                 {
-                    let mut map = registry_wait.lock().unwrap_or_else(|e| e.into_inner());
+                    let mut map = registry_wait.lock()
+                        .unwrap_or_else(|e| recover_mutex_poison(e, "terminal_registry_cleanup"));
                     if map.remove(&id_wait).is_some() {
                         tracing::info!(
                             "[SystemService] Removed session from registry for id: {}",
@@ -243,7 +245,8 @@ impl SystemService {
     }
 
     pub async fn write_terminal_stdin(&self, id: &str, input: &str) -> crate::error::Result<()> {
-        let mut map = self.registry.lock().unwrap_or_else(|e| e.into_inner());
+        let mut map = self.registry.lock()
+            .unwrap_or_else(|e| recover_mutex_poison(e, "terminal_registry_write"));
         if let Some(handle) = map.get_mut(id) {
             handle
                 .writer
@@ -261,7 +264,8 @@ impl SystemService {
         rows: u16,
         cols: u16,
     ) -> crate::error::Result<()> {
-        let mut map = self.registry.lock().unwrap_or_else(|e| e.into_inner());
+        let mut map = self.registry.lock()
+            .unwrap_or_else(|e| recover_mutex_poison(e, "terminal_registry_resize"));
         if let Some(handle) = map.get_mut(id) {
             handle
                 .master
@@ -279,7 +283,8 @@ impl SystemService {
     }
 
     pub async fn kill_terminal(&self, id: &str) -> crate::error::Result<()> {
-        let mut map = self.registry.lock().unwrap_or_else(|e| e.into_inner());
+        let mut map = self.registry.lock()
+            .unwrap_or_else(|e| recover_mutex_poison(e, "terminal_registry_kill"));
         if let Some(mut pty) = map.remove(id) {
             let _ = pty.child.kill();
             Ok(())

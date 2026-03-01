@@ -2380,3 +2380,107 @@ pub async fn voice_overlay_dismiss(
     let service = app.state::<Arc<VoiceWakeService>>();
     service.dismiss_overlay_session(app.clone(), token).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MAX_WORD_LENGTH: usize = 64;
+    const MAX_WORDS: usize = 32;
+
+    #[test]
+    fn test_sanitize_triggers_truncates_long_words() {
+        let long_word = "x".repeat(100);
+        let triggers = vec![long_word];
+        let sanitized = VoiceWakeService::sanitize_triggers(triggers);
+        assert_eq!(sanitized[0].len(), MAX_WORD_LENGTH);
+    }
+
+    #[test]
+    fn test_sanitize_triggers_limits_count() {
+        let triggers: Vec<String> = (0..100).map(|i| format!("trigger{}", i)).collect();
+        let sanitized = VoiceWakeService::sanitize_triggers(triggers);
+        assert!(sanitized.len() <= MAX_WORDS);
+    }
+
+    #[test]
+    fn test_sanitize_triggers_empty_returns_default() {
+        let sanitized = VoiceWakeService::sanitize_triggers(vec![]);
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0], "openclaw");
+    }
+
+    #[test]
+    fn test_sanitize_triggers_removes_whitespace() {
+        let triggers = vec!["  trigger  ".to_string(), "  another  ".to_string()];
+        let sanitized = VoiceWakeService::sanitize_triggers(triggers);
+        assert_eq!(sanitized[0], "trigger");
+        assert_eq!(sanitized[1], "another");
+    }
+
+    #[test]
+    fn test_sanitize_triggers_filters_empty() {
+        let triggers = vec!["valid".to_string(), "".to_string(), "   ".to_string()];
+        let sanitized = VoiceWakeService::sanitize_triggers(triggers);
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0], "valid");
+    }
+
+    #[test]
+    fn test_sanitize_locales_deduplicates_case_insensitive() {
+        let locales = vec![
+            "en-US".to_string(),
+            "en-us".to_string(),
+            "EN-US".to_string(),
+        ];
+        let sanitized = VoiceWakeService::sanitize_locales(locales);
+        // Should deduplicate to just one
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0], "en-US");
+    }
+
+    #[test]
+    fn test_sanitize_locales_removes_whitespace() {
+        let locales = vec!["  fr-FR  ".to_string(), "de-DE".to_string()];
+        let sanitized = VoiceWakeService::sanitize_locales(locales);
+        assert!(sanitized.contains(&"fr-FR".to_string()));
+        assert!(sanitized.contains(&"de-DE".to_string()));
+    }
+
+    #[test]
+    fn test_sanitize_locales_filters_empty() {
+        let locales = vec!["en-US".to_string(), "".to_string(), "   ".to_string()];
+        let sanitized = VoiceWakeService::sanitize_locales(locales);
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0], "en-US");
+    }
+
+    #[test]
+    fn test_starts_with_ci_case_insensitive() {
+        assert!(VoiceWakeService::starts_with_ci("OPENCLAW run tests", "openclaw"));
+        assert!(VoiceWakeService::starts_with_ci("OpenClaw run tests", "OPENCLAW"));
+        assert!(!VoiceWakeService::starts_with_ci("run tests", "openclaw"));
+    }
+
+    #[test]
+    fn test_longest_matching_trigger() {
+        let triggers = vec!["open".to_string(), "openclaw".to_string()];
+        let result = VoiceWakeService::longest_matching_trigger("openclaw run tests", &triggers);
+        assert_eq!(result, Some("openclaw"));
+    }
+
+    #[test]
+    fn test_command_after_trigger() {
+        let transcript = "openclaw run tests";
+        let command = VoiceWakeService::command_after_trigger(transcript, "openclaw");
+        assert_eq!(command.trim(), "run tests");
+    }
+
+    #[test]
+    fn test_command_after_trigger_with_spaces() {
+        let transcript = "  openclaw   run   tests  ";
+        let command = VoiceWakeService::command_after_trigger(transcript, "openclaw");
+        assert!(command.contains("run"));
+        assert!(command.contains("tests"));
+    }
+}
