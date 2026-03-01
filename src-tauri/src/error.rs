@@ -41,4 +41,16 @@ impl OpenClawError {
     }
 }
 
+/// Helper to recover from poisoned mutex with logging, spec-compliant alternative to unwrap()
+pub fn recover_mutex_poison<T>(
+    poison_error: std::sync::PoisonError<T>,
+    context: &str,
+) -> T {
+    tracing::warn!(
+        "Mutex poisoned in context '{}', recovering with inner value",
+        context
+    );
+    poison_error.into_inner()
+}
+
 pub type Result<T> = std::result::Result<T, OpenClawError>;

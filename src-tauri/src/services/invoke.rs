@@ -8,6 +8,15 @@ use std::os::windows::process::CommandExt;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum BoolOrString {
+    Bool(bool),
+    String(String),
+}
+
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct OpenClawSystemRunParams {
@@ -31,13 +40,6 @@ struct OpenClawSystemRunParams {
 #[serde(rename_all = "camelCase")]
 struct OpenClawSystemWhichParams {
     bins: Vec<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum BoolOrString {
-    Bool(bool),
-    String(String),
 }
 
 #[derive(Serialize)]
@@ -393,39 +395,91 @@ fn truncate_output(s: String) -> Option<String> {
 }
 
 fn sanitize_env(overrides: Option<HashMap<String, String>>) -> Option<HashMap<String, String>> {
-    let mut merged = std::env::vars().collect::<HashMap<String, String>>();
-    let overrides = overrides?;
+    let mut env = HashMap::new();
 
-    let blocked_keys: std::collections::HashSet<&str> = [
-        "PATH",
-        "NODE_OPTIONS",
-        "PYTHONHOME",
-        "PYTHONPATH",
-        "PERL5LIB",
-        "PERL5OPT",
-        "RUBYOPT",
-    ]
-    .iter()
-    .cloned()
-    .collect();
+    // Only whitelist critical environment variables that commands actually need
+    let whitelisted_keys = [
+        "HOME",
+        "USERPROFILE",
+        "TEMP",
+        "TMP",
+        "LANG",
+        "LC_ALL",
+        "TIMEZONE",
+        "COMPUTERNAME",
+        "USERNAME",
+        "USERDOMAIN",
+    ];
 
-    let blocked_prefixes = ["DYLD_", "LD_"];
-
-    for (key, value) in overrides {
-        let trimmed_key = key.trim();
-        if trimmed_key.is_empty() {
-            continue;
+    // Copy only whitelisted variables from current environment
+    for key in &whitelisted_keys {
+        if let Ok(value) = std::env::var(key) {
+            env.insert(key.to_string(), value);
         }
-        let upper = trimmed_key.to_uppercase();
-        if blocked_keys.contains(upper.as_str()) {
-            continue;
-        }
-        if blocked_prefixes.iter().any(|p| upper.starts_with(p)) {
-            continue;
-        }
-        merged.insert(trimmed_key.to_string(), value);
     }
-    Some(merged)
+
+    // Add operator-provided overrides, with validation
+    if let Some(overrides) = overrides {
+        for (key, value) in overrides {
+            let trimmed_key = key.trim();
+
+            // Validate key format: only alphanumeric and underscore
+            if !trimmed_key.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                tracing::warn!(
+                    "[sanitize_env] Blocked invalid environment variable name: {}",
+                    trimmed_key
+                );
+                continue;
+            }
+
+            // Prevent null bytes in value
+            if value.contains('\0') {
+                tracing::warn!(
+                    "[sanitize_env] Blocked null byte in environment variable: {}",
+                    trimmed_key
+                );
+                continue;
+            }
+
+            // Block known dangerous variables even if provided by operator
+            let upper = trimmed_key.to_uppercase();
+            let blocked_keys = [
+                "PATH",
+                "NODE_OPTIONS",
+                "PYTHONHOME",
+                "PYTHONPATH",
+                "PERL5LIB",
+                "PERL5OPT",
+                "RUBYOPT",
+            ];
+            let blocked_prefixes = ["DYLD_", "LD_"];
+
+            if blocked_keys.contains(&upper.as_str()) {
+                tracing::warn!(
+                    "[sanitize_env] Blocked dangerous environment variable: {}",
+                    trimmed_key
+                );
+                continue;
+            }
+
+            if blocked_prefixes.iter().any(|p| upper.starts_with(p)) {
+                tracing::warn!(
+                    "[sanitize_env] Blocked dangerous environment variable prefix: {}",
+                    trimmed_key
+                );
+                continue;
+            }
+
+            // Safe to add
+            env.insert(trimmed_key.to_string(), value);
+        }
+    }
+
+    if env.is_empty() {
+        None
+    } else {
+        Some(env)
+    }
 }
 
 async fn handle_system_which(
@@ -500,4 +554,143 @@ async fn handle_exec_approvals_set(
     next_snapshot.hash = hash;
 
     Ok(json!(next_snapshot))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_env_blocks_path() {
+        let overrides = {
+            let mut m = HashMap::new();
+            m.insert("PATH".to_string(), "/usr/bin".to_string());
+            m.insert("HOME".to_string(), "/home/user".to_string());
+            Some(m)
+        };
+
+        let result = sanitize_env(overrides).unwrap();
+
+        // PATH should be blocked
+        assert!(!result.contains_key("PATH"));
+        // HOME should be allowed (whitelisted)
+        assert!(result.contains_key("HOME"));
+    }
+
+    #[test]
+    fn test_sanitize_env_blocks_null_bytes() {
+        let overrides = {
+            let mut m = HashMap::new();
+            m.insert("MALICIOUS".to_string(), "value\0bad".to_string());
+            Some(m)
+        };
+
+        let result = sanitize_env(overrides);
+        if let Some(env) = result {
+            assert!(!env.contains_key("MALICIOUS"));
+        }
+    }
+
+    #[test]
+    fn test_sanitize_env_blocks_invalid_variable_names() {
+        let overrides = {
+            let mut m = HashMap::new();
+            m.insert("VALID_VAR".to_string(), "value".to_string());
+            m.insert("INVALID-VAR".to_string(), "value".to_string());
+            m.insert("VAR WITH SPACES".to_string(), "value".to_string());
+            Some(m)
+        };
+
+        let result = sanitize_env(overrides).unwrap();
+
+        assert!(result.contains_key("VALID_VAR"));
+        assert!(!result.contains_key("INVALID-VAR"));
+        assert!(!result.contains_key("VAR WITH SPACES"));
+    }
+
+    #[test]
+    fn test_sanitize_env_blocks_dangerous_prefixes() {
+        let overrides = {
+            let mut m = HashMap::new();
+            m.insert("LD_PRELOAD".to_string(), "libhack.so".to_string());
+            m.insert("DYLD_INSERT_LIBRARIES".to_string(), "libhack.dylib".to_string());
+            m.insert("SAFE_CUSTOM_VAR".to_string(), "value".to_string());
+            Some(m)
+        };
+
+        let result = sanitize_env(overrides).unwrap();
+
+        assert!(!result.contains_key("LD_PRELOAD"));
+        assert!(!result.contains_key("DYLD_INSERT_LIBRARIES"));
+        assert!(result.contains_key("SAFE_CUSTOM_VAR"));
+    }
+
+    #[test]
+    fn test_sanitize_env_whitelists_critical_vars() {
+        // This test verifies the whitelist approach includes critical environment vars
+        let result = sanitize_env(None);
+        // Should return Some with at least whitelisted vars (USERPROFILE, TEMP, etc.)
+        assert!(result.is_some());
+        let env = result.unwrap();
+        // At least one of the critical vars should be present on Windows
+        assert!(
+            env.contains_key("USERPROFILE")
+                || env.contains_key("HOME")
+                || env.contains_key("TEMP")
+                || env.contains_key("USERNAME")
+        );
+    }
+
+    #[test]
+    fn test_command_formatting_simple() {
+        let argv = vec!["echo".to_string(), "hello".to_string()];
+        let formatted = ExecCommandFormatter::display_string(&argv, None);
+        assert_eq!(formatted, "echo hello");
+    }
+
+    #[test]
+    fn test_command_formatting_with_spaces() {
+        let argv = vec!["echo".to_string(), "hello world".to_string()];
+        let formatted = ExecCommandFormatter::display_string(&argv, None);
+        assert_eq!(formatted, "echo \"hello world\"");
+    }
+
+    #[test]
+    fn test_command_formatting_with_quotes() {
+        let argv = vec!["echo".to_string(), "hello \"world\"".to_string()];
+        let formatted = ExecCommandFormatter::display_string(&argv, None);
+        // Quotes should be escaped
+        assert!(formatted.contains("\\\""));
+    }
+
+    #[test]
+    fn test_command_formatting_empty_args() {
+        let argv = vec!["cmd".to_string(), "".to_string()];
+        let formatted = ExecCommandFormatter::display_string(&argv, None);
+        assert_eq!(formatted, "cmd \"\"");
+    }
+
+    #[test]
+    fn test_output_truncation() {
+        let long_output = "x".repeat(25000);
+        let result = truncate_output(long_output);
+        assert!(result.is_some());
+        let truncated = result.unwrap();
+        assert!(truncated.len() < 25000);
+        assert!(truncated.contains("(truncated)"));
+    }
+
+    #[test]
+    fn test_output_truncation_short() {
+        let output = "short output";
+        let result = truncate_output(output.to_string());
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), "short output");
+    }
+
+    #[test]
+    fn test_output_truncation_empty() {
+        let result = truncate_output("   ".to_string());
+        assert_eq!(result, None);
+    }
 }

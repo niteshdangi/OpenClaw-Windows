@@ -59,7 +59,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https: http: ws: wss: ipc:; img-src 'self' asset: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' asset: data: blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+      "csp": "default-src 'self'; connect-src 'self' https: wss: ipc:; img-src 'self' asset: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' asset: data: blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"
     }
   },
   "bundle": {
