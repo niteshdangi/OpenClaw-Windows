@@ -71,10 +71,7 @@ pub fn run() {
                 Arc::new(services::ExecApprovalsService::new(app.handle().clone()));
 
             let system_provider = Arc::new(providers::system::RealSystemProvider);
-            let system_service = Arc::new(services::system::SystemService::new(
-                system_provider,
-                exec_approvals_service.clone(),
-            ));
+            let system_service = Arc::new(services::system::SystemService::new(system_provider));
             let config_provider = Box::new(providers::config::JsonConfigProvider);
             let config_service = Arc::new(services::ConfigService::new(
                 app.handle().clone(),
