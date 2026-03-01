@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Button,
@@ -56,22 +56,17 @@ const useStyles = makeStyles({
 
 export default function ExecApprovalScreen() {
   const styles = useStyles();
-  const [params, setParams] = useState<{
+  const [params] = useState<{
     id: string;
     command: string;
     agentId?: string;
-  } | null>(null);
-
-  useEffect(() => {
+  } | null>(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id");
     const command = urlParams.get("command");
     const agentId = urlParams.get("agentId") || undefined;
-
-    if (id && command) {
-      setParams({ id, command, agentId });
-    }
-  }, []);
+    return id && command ? { id, command, agentId } : null;
+  });
 
   const resolve = async (decision: "allowonce" | "allowalways" | "deny") => {
     if (!params) return;

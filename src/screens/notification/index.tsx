@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { makeStyles, Subtitle2, Text } from "@fluentui/react-components";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
@@ -20,14 +20,16 @@ export const NotificationScreen = () => {
   const [content, setContent] = useState<{
     title: string;
     body: string;
-  } | null>(null);
-
-  useEffect(() => {
+  } | null>(() => {
     const params = new URLSearchParams(window.location.search);
     const title = params.get("title");
     const body = params.get("body") || "";
-    if (title) {
-      setContent({ title, body });
+    return title ? { title, body } : null;
+  });
+  const initialContentRef = useRef(content);
+
+  useEffect(() => {
+    if (initialContentRef.current) {
       getCurrentWebviewWindow().show();
     }
 

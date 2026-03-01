@@ -14,8 +14,8 @@ import {
 } from "@fluentui/react-components";
 import { ArrowClockwise20Regular, Link20Regular } from "@fluentui/react-icons";
 import { formatError } from "../../../utils/error";
+import { ChannelConfigSchemaForm } from "./ChannelConfigSchemaForm";
 import {
-  ChannelConfigSchemaForm,
   type ConfigPath,
   type ConfigSchemaNode,
   type ConfigUiHint,
@@ -25,7 +25,7 @@ import {
   parseConfigSchemaNode,
   schemaNodeAtPath,
   setValueAtPath,
-} from "./ChannelConfigSchemaForm";
+} from "./channel-config-schema-utils";
 
 const POLL_INTERVAL_MS = 45_000;
 

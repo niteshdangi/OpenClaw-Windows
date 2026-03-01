@@ -2,6 +2,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useReducer,
   useRef,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -253,13 +254,23 @@ function sameStringArray(a: string[], b: string[]): boolean {
   return a.every((value, index) => value === b[index]);
 }
 
+type StrArrayAction = string[] | ((prev: string[]) => string[]);
+const strArrayReducer = (state: string[], action: StrArrayAction): string[] =>
+  typeof action === "function" ? action(state) : action;
+
+const strReducer = (_: string, action: string): string => action;
+
 export function VoiceWakeTab() {
   const styles = useStyles();
-  const [editableTriggers, setEditableTriggers] = useState<string[]>([]);
-  const [editableAdditionalLocales, setEditableAdditionalLocales] = useState<
-    string[]
-  >([]);
-  const [pttDraft, setPttDraft] = useState("");
+  const [editableTriggers, setEditableTriggers] = useReducer(
+    strArrayReducer,
+    []
+  );
+  const [editableAdditionalLocales, setEditableAdditionalLocales] = useReducer(
+    strArrayReducer,
+    []
+  );
+  const [pttDraft, setPttDraft] = useReducer(strReducer, "");
   const [capturingPtt, setCapturingPtt] = useState(false);
   const [testState, setTestState] = useState<TestState>("idle");
   const [testHeardText, setTestHeardText] = useState("");

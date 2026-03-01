@@ -124,6 +124,16 @@ interface ExecApprovalsSnapshot {
   hash: string;
 }
 
+function isSecurityValue(
+  v: string | undefined
+): v is ExecAgentSettings["security"] {
+  return v === "deny" || v === "allow" || v === "allowlist";
+}
+
+function isAskValue(v: string | undefined): v is ExecAgentSettings["ask"] {
+  return v === "never" || v === "new" || v === "always";
+}
+
 interface PermStatus {
   microphone: boolean;
   camera: boolean;
@@ -241,7 +251,10 @@ export function PermissionsTab() {
     }
   };
 
-  const updateGlobalSetting = (key: keyof ExecAgentSettings, value: any) => {
+  const updateGlobalSetting = <K extends keyof ExecAgentSettings>(
+    key: K,
+    value: ExecAgentSettings[K]
+  ) => {
     if (!execSnapshot) return;
     const nextFile = {
       ...execSnapshot.file,
@@ -281,9 +294,10 @@ export function PermissionsTab() {
               selectedOptions={[
                 execSnapshot?.file.global.security ?? "allowlist",
               ]}
-              onOptionSelect={(_, data) =>
-                updateGlobalSetting("security", data.optionValue)
-              }
+              onOptionSelect={(_, data) => {
+                if (isSecurityValue(data.optionValue))
+                  updateGlobalSetting("security", data.optionValue);
+              }}
               disabled={updating}
               listbox={{
                 style: { backgroundColor: tokens.colorNeutralBackground2 },
@@ -306,9 +320,10 @@ export function PermissionsTab() {
               size="small"
               value={execSnapshot?.file.global.ask ?? "new"}
               selectedOptions={[execSnapshot?.file.global.ask ?? "new"]}
-              onOptionSelect={(_, data) =>
-                updateGlobalSetting("ask", data.optionValue)
-              }
+              onOptionSelect={(_, data) => {
+                if (isAskValue(data.optionValue))
+                  updateGlobalSetting("ask", data.optionValue);
+              }}
               disabled={updating}
               listbox={{
                 style: { backgroundColor: tokens.colorNeutralBackground2 },
