@@ -8,7 +8,6 @@ use std::os::windows::process::CommandExt;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct OpenClawSystemRunParams {
@@ -603,7 +602,10 @@ mod tests {
         let overrides = {
             let mut m = HashMap::new();
             m.insert("LD_PRELOAD".to_string(), "libhack.so".to_string());
-            m.insert("DYLD_INSERT_LIBRARIES".to_string(), "libhack.dylib".to_string());
+            m.insert(
+                "DYLD_INSERT_LIBRARIES".to_string(),
+                "libhack.dylib".to_string(),
+            );
             m.insert("SAFE_CUSTOM_VAR".to_string(), "value".to_string());
             Some(m)
         };

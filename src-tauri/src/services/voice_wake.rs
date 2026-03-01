@@ -2457,8 +2457,14 @@ mod tests {
 
     #[test]
     fn test_starts_with_ci_case_insensitive() {
-        assert!(VoiceWakeService::starts_with_ci("OPENCLAW run tests", "openclaw"));
-        assert!(VoiceWakeService::starts_with_ci("OpenClaw run tests", "OPENCLAW"));
+        assert!(VoiceWakeService::starts_with_ci(
+            "OPENCLAW run tests",
+            "openclaw"
+        ));
+        assert!(VoiceWakeService::starts_with_ci(
+            "OpenClaw run tests",
+            "OPENCLAW"
+        ));
         assert!(!VoiceWakeService::starts_with_ci("run tests", "openclaw"));
     }
 
