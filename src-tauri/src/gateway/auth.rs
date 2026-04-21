@@ -13,9 +13,7 @@ fn get_windows_version() -> String {
         .creation_flags(0x08000000)
         .output();
     match output {
-        Ok(o) if o.status.success() => {
-            String::from_utf8_lossy(&o.stdout).trim().to_string()
-        }
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         _ => "Windows".to_string(),
     }
 }

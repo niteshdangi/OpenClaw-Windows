@@ -244,9 +244,7 @@ impl GatewayService {
                                 "data": info
                             }
                         });
-                        let _ = gateway
-                            .send_node_response(event.to_string())
-                            .await;
+                        let _ = gateway.send_node_response(event.to_string()).await;
                     }
                 }
             }
@@ -861,10 +859,7 @@ impl GatewayService {
         // After node connects, drain any pending actions queued while offline
         if role == GatewayRole::Node {
             let app_for_drain = app.clone();
-            let self_for_drain = app_for_drain
-                .state::<Arc<GatewayService>>()
-                .inner()
-                .clone();
+            let self_for_drain = app_for_drain.state::<Arc<GatewayService>>().inner().clone();
             tokio::spawn(async move {
                 Self::drain_pending_actions(&app_for_drain, &self_for_drain).await;
             });

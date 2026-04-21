@@ -1,5 +1,5 @@
-use crate::providers::{AudioHandle, AudioProvider, SpeechProvider};
 use crate::providers::speech::{RecognitionEvent, RecognitionOptions};
+use crate::providers::{AudioHandle, AudioProvider, SpeechProvider};
 use crate::services::runtime::BackgroundService;
 use crate::services::GatewayService;
 use async_trait::async_trait;
@@ -31,11 +31,7 @@ impl TalkService {
         }
     }
 
-    pub async fn set_enabled(
-        &self,
-        app: &AppHandle,
-        enabled: bool,
-    ) -> crate::error::Result<()> {
+    pub async fn set_enabled(&self, app: &AppHandle, enabled: bool) -> crate::error::Result<()> {
         let mut is_enabled = self.is_enabled.lock().await;
 
         if enabled == *is_enabled {
@@ -49,20 +45,20 @@ impl TalkService {
             let app_handle = app.clone();
             let mut audio_lock = self.audio_handle.lock().await;
             if audio_lock.is_none() {
-                let handle = self.audio_provider.build_input_stream(Box::new(
-                    move |data: &[f32]| {
-                        if data.is_empty() {
-                            return;
-                        }
-                        let mut sum = 0.0;
-                        for &sample in data {
-                            sum += sample * sample;
-                        }
-                        let rms = (sum / data.len() as f32).sqrt();
-                        let level = (rms * 3.0).min(1.0);
-                        let _ = app_handle.emit("voice_audio_level", json!({ "level": level }));
-                    },
-                ))?;
+                let handle =
+                    self.audio_provider
+                        .build_input_stream(Box::new(move |data: &[f32]| {
+                            if data.is_empty() {
+                                return;
+                            }
+                            let mut sum = 0.0;
+                            for &sample in data {
+                                sum += sample * sample;
+                            }
+                            let rms = (sum / data.len() as f32).sqrt();
+                            let level = (rms * 3.0).min(1.0);
+                            let _ = app_handle.emit("voice_audio_level", json!({ "level": level }));
+                        }))?;
                 handle.play()?;
                 *audio_lock = Some(handle);
             }
@@ -75,7 +71,10 @@ impl TalkService {
                     RecognitionOptions::default(),
                     Box::new(move |event: RecognitionEvent| {
                         if event.session_completed {
-                            tracing::info!("[TalkMode] Speech session completed (status={:?})", event.status);
+                            tracing::info!(
+                                "[TalkMode] Speech session completed (status={:?})",
+                                event.status
+                            );
                             return;
                         }
 

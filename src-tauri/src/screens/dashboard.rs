@@ -42,9 +42,9 @@ pub async fn open(app: &AppHandle) -> crate::error::Result<()> {
     };
 
     tracing::info!("[Dashboard] Opening gateway control UI: {}", url);
-    app.opener()
-        .open_url(&url, None::<&str>)
-        .map_err(|e| crate::error::OpenClawError::Internal(format!("Failed to open browser: {}", e)))?;
+    app.opener().open_url(&url, None::<&str>).map_err(|e| {
+        crate::error::OpenClawError::Internal(format!("Failed to open browser: {}", e))
+    })?;
 
     Ok(())
 }

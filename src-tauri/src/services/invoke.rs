@@ -225,9 +225,7 @@ async fn handle_system_run_prepare(
 
     let command_text = ExecCommandFormatter::display_string(
         &argv,
-        params
-            .get("rawCommand")
-            .and_then(|v| v.as_str()),
+        params.get("rawCommand").and_then(|v| v.as_str()),
     );
 
     let cwd = params
@@ -277,15 +275,10 @@ async fn handle_browser_proxy(
         .and_then(|v| v.as_str())
         .unwrap_or("GET")
         .to_uppercase();
-    let path = params
-        .get("path")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let path = params.get("path").and_then(|v| v.as_str()).unwrap_or("");
 
     // Block forbidden mutations (aligned with gateway policy)
-    if method == "POST"
-        && (path.contains("/profiles/create") || path.contains("/reset-profile"))
-    {
+    if method == "POST" && (path.contains("/profiles/create") || path.contains("/reset-profile")) {
         return Err(OpenClawError::Internal(
             "browser.proxy cannot mutate persistent browser profiles".to_string(),
         ));
@@ -674,9 +667,7 @@ pub fn build_device_info() -> serde_json::Value {
             .creation_flags(0x08000000)
             .output();
         match output {
-            Ok(o) if o.status.success() => {
-                String::from_utf8_lossy(&o.stdout).trim().to_string()
-            }
+            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
             _ => "Windows".to_string(),
         }
     };

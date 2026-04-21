@@ -378,7 +378,10 @@ impl SpeechProvider for WindowsSpeechProvider {
         tracing::info!("Windows speech recognition session started.");
 
         let mut lock = self.recognizer.lock().map_err(|e| {
-            crate::error::OpenClawError::Internal(format!("Speech recognizer mutex poisoned: {}", e))
+            crate::error::OpenClawError::Internal(format!(
+                "Speech recognizer mutex poisoned: {}",
+                e
+            ))
         })?;
         *lock = Some(recognizer);
 
@@ -388,7 +391,10 @@ impl SpeechProvider for WindowsSpeechProvider {
     async fn stop_recognition(&self) -> crate::error::Result<()> {
         let recognizer = {
             let mut lock = self.recognizer.lock().map_err(|e| {
-                crate::error::OpenClawError::Internal(format!("Speech recognizer mutex poisoned: {}", e))
+                crate::error::OpenClawError::Internal(format!(
+                    "Speech recognizer mutex poisoned: {}",
+                    e
+                ))
             })?;
             lock.take()
         };
