@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   Button,
   Spinner,
@@ -7,9 +8,10 @@ import {
   tokens,
   makeStyles,
 } from "@fluentui/react-components";
-import { ArrowClockwise20Regular } from "@fluentui/react-icons";
-import { formatError } from "../../../utils/error";
-
+import {
+  ArrowClockwise20Regular,
+  Delete20Regular,
+} from "@fluentui/react-icons";
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", gap: "12px" },
   header: {
@@ -141,9 +143,25 @@ export function SessionsTab() {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+        const unlisten = listen("sessions.changed", () => {
+            refresh();
+        });
+        return () => {
+            unlisten.then((f) => f());
+        };
+    }, [refresh]);
 
-  return (
+    const clearSession = useCallback(
+        async (key: string) => {
+            try {
+                await invoke("clear_session", { key });
+                setSessions((prev) => prev.filter((s) => s.key !== key));
+            } catch (e) {
+                setError(formatError(e, "Failed to clear session"));
+            }
+        },
+        []
+    );
     <div className={styles.root}>
       <div className={styles.header}>
         <div className={styles.titleBlock}>
@@ -216,19 +234,16 @@ export function SessionsTab() {
               >
                 {sess.label || sess.key}
               </Text>
-              <Text className={styles.age}>{ageText(sess.updatedAt)}</Text>
-            </div>
-
-            {(sess.kind || (sess.flags?.length ?? 0) > 0) && (
-              <div className={styles.badges}>
-                {sess.kind && sess.kind !== "direct" && (
-                  <span
-                    className={styles.badge}
-                    style={{
-                      backgroundColor: `${kindColor(sess.kind)}22`,
-                      color: kindColor(sess.kind),
-                    }}
-                  >
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Text className={styles.age}>{ageText(sess.updatedAt)}</Text>
+                                <Button
+                                    appearance="subtle"
+                                    size="small"
+                                    icon={<Delete20Regular />}
+                                    title="Clear session"
+                                    onClick={() => clearSession(sess.key)}
+                                />
+                            </div>
                     {sess.kind.toUpperCase()}
                   </span>
                 )}

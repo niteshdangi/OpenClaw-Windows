@@ -1872,7 +1872,7 @@ impl VoiceWakeService {
 
     async fn refresh_from_gateway(&self) -> crate::error::Result<()> {
         let req = json!({
-            "id": format!("vw_get_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+            "id": format!("vw_get_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()),
             "type": "req",
             "method": "voicewake.get",
             "params": {}
@@ -1913,7 +1913,7 @@ impl VoiceWakeService {
         }
 
         let req = json!({
-            "id": format!("vw_set_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+            "id": format!("vw_set_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()),
             "type": "req",
             "method": "voicewake.set",
             "params": {
@@ -2210,6 +2210,14 @@ impl BackgroundService for VoiceWakeService {
 
 #[tauri::command]
 pub async fn set_voice_wake_enabled(app: AppHandle, enabled: bool) -> crate::error::Result<()> {
+    // Mutual exclusion: disable talk mode when voice wake starts
+    if enabled {
+        let talk_service = app.state::<Arc<crate::services::talk::TalkService>>();
+        if talk_service.is_enabled().await {
+            tracing::info!("[VoiceWake] Disabling talk mode for voice wake");
+            talk_service.set_enabled(&app, false).await?;
+        }
+    }
     let service = app.state::<Arc<VoiceWakeService>>();
     service.set_enabled(app.clone(), enabled).await
 }

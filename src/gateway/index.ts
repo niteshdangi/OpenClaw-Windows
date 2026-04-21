@@ -58,15 +58,16 @@ class Gateway {
       return this.gatewayStatus;
     }
     return new Promise((resolve, reject) => {
+      let unsubscribe: (() => void) | null = null;
       const timer = setTimeout(() => {
-        unsubscribe();
+        unsubscribe?.();
         reject(new Error("Gateway connection timed out"));
       }, timeoutMs);
 
-      const unsubscribe = this.onGatewayStatusChange((status) => {
+      unsubscribe = this.onGatewayStatusChange((status) => {
         if (status.connected) {
           clearTimeout(timer);
-          unsubscribe();
+          unsubscribe?.();
           resolve(status);
         }
       });

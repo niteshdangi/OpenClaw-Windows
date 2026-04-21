@@ -233,11 +233,13 @@ export function VoiceOverlay() {
     );
 
     return () => {
-      unlistenPtt.then((f) => f());
-      unlistenActive.then((f) => f());
-      unlistenTrigger.then((f) => f());
-      unlistenDismissed.then((f) => f());
-      unlistenAudioLevel.then((f) => f());
+      Promise.all([
+        unlistenPtt.then((f) => f()),
+        unlistenActive.then((f) => f()),
+        unlistenTrigger.then((f) => f()),
+        unlistenDismissed.then((f) => f()),
+        unlistenAudioLevel.then((f) => f()),
+      ]).catch(console.error);
       clearHideTimer();
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(console.error);

@@ -5,6 +5,27 @@ use serde_json::json;
 /// The gateway WebSocket protocol version this client supports.
 const PROTOCOL_VERSION: u32 = 3;
 
+fn get_windows_version() -> String {
+    #[cfg(windows)]
+    use std::os::windows::process::CommandExt;
+    let output = std::process::Command::new("cmd")
+        .args(["/c", "ver"])
+        .creation_flags(0x08000000)
+        .output();
+    match output {
+        Ok(o) if o.status.success() => {
+            String::from_utf8_lossy(&o.stdout).trim().to_string()
+        }
+        _ => "Windows".to_string(),
+    }
+}
+
+fn get_device_name() -> String {
+    std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "Windows PC".to_string())
+}
+
 pub fn sign_nonce(
     device_id: &str,
     private_key: &[u8],
@@ -53,7 +74,7 @@ pub fn get_operator_connection_req(
         .as_millis();
 
     let token = config.auth_token.clone();
-    let client_id = "openclaw-macos";
+    let client_id = "openclaw-windows";
     let scopes = vec![
         "operator.admin".to_string(),
         "operator.approvals".to_string(),
@@ -83,10 +104,12 @@ pub fn get_operator_connection_req(
             "maxProtocol": PROTOCOL_VERSION,
             "client": {
                 "id": client_id,
-                "version": "1.0.1",
+                "version": env!("CARGO_PKG_VERSION"),
                 "platform": "windows",
                 "mode": "ui",
-                "displayName": "OpenClaw Windows"
+                "displayName": get_device_name(),
+                "deviceFamily": "desktop",
+                "modelIdentifier": get_windows_version()
             },
             "role": "operator",
             "scopes": scopes,
@@ -113,7 +136,7 @@ pub fn get_node_connection_req(nonce: &str, config: &Config) -> anyhow::Result<s
         .as_millis();
 
     let token = config.auth_token.clone();
-    let client_id = "openclaw-macos";
+    let client_id = "openclaw-windows";
 
     let scopes: Vec<String> = vec![];
 
@@ -121,9 +144,13 @@ pub fn get_node_connection_req(nonce: &str, config: &Config) -> anyhow::Result<s
         "screen.record".to_string(),
         "system.notify".to_string(),
         "system.run".to_string(),
+        "system.run.prepare".to_string(),
         "system.which".to_string(),
-        "system.exec_approvals.get".to_string(),
-        "system.exec_approvals.set".to_string(),
+        "browser.proxy".to_string(),
+        "system.execApprovals.get".to_string(),
+        "system.execApprovals.set".to_string(),
+        "device.info".to_string(),
+        "device.status".to_string(),
     ];
 
     if config.camera_enabled {
@@ -152,10 +179,12 @@ pub fn get_node_connection_req(nonce: &str, config: &Config) -> anyhow::Result<s
             "maxProtocol": PROTOCOL_VERSION,
             "client": {
                 "id": client_id,
-                "version": "1.0.1",
+                "version": env!("CARGO_PKG_VERSION"),
                 "platform": "windows",
                 "mode": "ui",
-                "displayName": "OpenClaw Windows"
+                "displayName": get_device_name(),
+                "deviceFamily": "desktop",
+                "modelIdentifier": get_windows_version()
             },
             "role": "node",
             "scopes": scopes,

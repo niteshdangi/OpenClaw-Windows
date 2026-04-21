@@ -125,6 +125,7 @@ pub async fn handle_request(app: AppHandle, req: serde_json::Value, gateway: Arc
             crate::services::media::handle_screen_record(&app, &p).await
         }
         "system.run" => handle_system_run(&app, params_json, gateway.clone()).await,
+        "system.run.prepare" => handle_system_run_prepare(&app, params_json).await,
         "system.which" => {
             let p = params_json
                 .and_then(|s| serde_json::from_str(s).ok())
@@ -137,18 +138,21 @@ pub async fn handle_request(app: AppHandle, req: serde_json::Value, gateway: Arc
                 .unwrap_or(Value::Null);
             handle_system_notify(&app, &p).await
         }
-        "system.exec_approvals.get" => {
+        "browser.proxy" => handle_browser_proxy(&app, params_json).await,
+        "system.execApprovals.get" => {
             let p = params_json
                 .and_then(|s| serde_json::from_str(s).ok())
                 .unwrap_or(Value::Null);
             handle_exec_approvals_get(&app, &p).await
         }
-        "system.exec_approvals.set" => {
+        "system.execApprovals.set" => {
             let p = params_json
                 .and_then(|s| serde_json::from_str(s).ok())
                 .unwrap_or(Value::Null);
             handle_exec_approvals_set(&app, &p).await
         }
+        "device.info" => Ok(build_device_info()),
+        "device.status" => Ok(build_device_info()),
         _ => {
             tracing::warn!("Unknown command received from gateway: {}", command);
             Err(OpenClawError::Internal(format!(
@@ -159,17 +163,21 @@ pub async fn handle_request(app: AppHandle, req: serde_json::Value, gateway: Arc
     };
 
     let response = match res {
-        Ok(payload) => json!({
-            "type": "req",
-            "id": uuid::Uuid::new_v4().simple().to_string(),
-            "method": "node.invoke.result",
-            "params": {
-                "id": id,
-                "nodeId": node_id,
-                "ok": true,
-                "payload": payload
-            }
-        }),
+        Ok(payload) => {
+            let payload_json_str = serde_json::to_string(&payload).ok();
+            json!({
+                "type": "req",
+                "id": uuid::Uuid::new_v4().simple().to_string(),
+                "method": "node.invoke.result",
+                "params": {
+                    "id": id,
+                    "nodeId": node_id,
+                    "ok": true,
+                    "payload": payload,
+                    "payloadJSON": payload_json_str
+                }
+            })
+        }
         Err(e) => json!({
             "type": "req",
             "id": uuid::Uuid::new_v4().simple().to_string(),
@@ -184,6 +192,116 @@ pub async fn handle_request(app: AppHandle, req: serde_json::Value, gateway: Arc
     };
 
     let _ = gateway.send_node_response(response.to_string()).await;
+}
+
+async fn handle_system_run_prepare(
+    app: &AppHandle,
+    params_json: Option<&str>,
+) -> crate::error::Result<serde_json::Value> {
+    let params: Value = params_json
+        .and_then(|s| serde_json::from_str(s).ok())
+        .unwrap_or(Value::Null);
+
+    let command = params.get("command").or_else(|| params.get("rawCommand"));
+    let argv: Vec<String> = match command {
+        Some(Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|v| v.as_str().map(ToString::to_string))
+            .collect(),
+        Some(Value::String(s)) => {
+            // Simple shell-style split for rawCommand
+            s.split_whitespace().map(ToString::to_string).collect()
+        }
+        _ => {
+            return Err(OpenClawError::Internal(
+                "command required for system.run.prepare".to_string(),
+            ));
+        }
+    };
+
+    if argv.is_empty() {
+        return Err(OpenClawError::Internal("command required".to_string()));
+    }
+
+    let command_text = ExecCommandFormatter::display_string(
+        &argv,
+        params
+            .get("rawCommand")
+            .and_then(|v| v.as_str()),
+    );
+
+    let cwd = params
+        .get("cwd")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
+    let agent_id = params
+        .get("agentId")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
+    let session_key = params
+        .get("sessionKey")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
+
+    // Validate via exec approval service
+    let exec_service = app.state::<Arc<ExecApprovalsService>>();
+    let validation = exec_service
+        .validate_command(&command_text, agent_id.as_deref())
+        .await;
+
+    let needs_approval = validation.is_err();
+
+    Ok(json!({
+        "plan": {
+            "argv": argv,
+            "cwd": cwd,
+            "commandText": command_text,
+            "commandPreview": Value::Null,
+            "agentId": agent_id,
+            "sessionKey": session_key,
+            "needsApproval": needs_approval,
+        }
+    }))
+}
+
+async fn handle_browser_proxy(
+    _app: &AppHandle,
+    params_json: Option<&str>,
+) -> crate::error::Result<serde_json::Value> {
+    let params: Value = params_json
+        .and_then(|s| serde_json::from_str(s).ok())
+        .unwrap_or(Value::Null);
+
+    let method = params
+        .get("method")
+        .and_then(|v| v.as_str())
+        .unwrap_or("GET")
+        .to_uppercase();
+    let path = params
+        .get("path")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    // Block forbidden mutations (aligned with gateway policy)
+    if method == "POST"
+        && (path.contains("/profiles/create") || path.contains("/reset-profile"))
+    {
+        return Err(OpenClawError::Internal(
+            "browser.proxy cannot mutate persistent browser profiles".to_string(),
+        ));
+    }
+    if method == "DELETE" && path.contains("/profiles/") {
+        return Err(OpenClawError::Internal(
+            "browser.proxy cannot delete browser profiles".to_string(),
+        ));
+    }
+
+    // Forward to local browser proxy (Chrome DevTools Protocol)
+    // The actual CDP proxy implementation depends on whether a browser instance is running.
+    // For now, return a structured error indicating no browser session is active.
+    Err(OpenClawError::Internal(
+        "No active browser session. Start a browser session first.".to_string(),
+    ))
 }
 
 async fn handle_system_run(
@@ -543,6 +661,36 @@ async fn handle_exec_approvals_set(
     next_snapshot.hash = hash;
 
     Ok(json!(next_snapshot))
+}
+
+pub fn build_device_info() -> serde_json::Value {
+    let hostname = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    let os_version = {
+        let output = std::process::Command::new("cmd")
+            .args(["/c", "ver"])
+            .creation_flags(0x08000000)
+            .output();
+        match output {
+            Ok(o) if o.status.success() => {
+                String::from_utf8_lossy(&o.stdout).trim().to_string()
+            }
+            _ => "Windows".to_string(),
+        }
+    };
+
+    let username = std::env::var("USERNAME").unwrap_or_default();
+
+    json!({
+        "hostname": hostname,
+        "platform": "windows",
+        "osVersion": os_version,
+        "appVersion": env!("CARGO_PKG_VERSION"),
+        "deviceFamily": "desktop",
+        "username": username,
+    })
 }
 
 #[cfg(test)]

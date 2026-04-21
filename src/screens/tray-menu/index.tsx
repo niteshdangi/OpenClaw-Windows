@@ -50,6 +50,7 @@ export function TrayMenu() {
   const [currentMicId, setCurrentMicId] = useState("");
   const [voiceWakeLocale, setVoiceWakeLocale] = useState("");
   const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -135,20 +136,30 @@ export function TrayMenu() {
   }, []);
 
   const handleVoiceWakeToggle = async (enabled: boolean) => {
+    setToggling("voice");
+    setStatus((s) => (s ? { ...s, voiceWakeEnabled: enabled } : s));
     try {
       await invoke("set_voice_wake_enabled", { enabled });
-      setStatus((s) => (s ? { ...s, voiceWakeEnabled: enabled } : s));
     } catch (e) {
       console.error(e);
+      setStatus((s) => (s ? { ...s, voiceWakeEnabled: !enabled } : s));
+    } finally {
+      setToggling(null);
     }
   };
 
   const handleTalkModeToggle = async (enabled: boolean) => {
+    setToggling("talk");
+    setStatus((s) => (s ? { ...s, talkModeEnabled: enabled } : s));
     try {
       await invoke("set_talk_mode_enabled", { enabled });
-      setStatus((s) => (s ? { ...s, talkModeEnabled: enabled } : s));
+      // Talk mode disables voice wake via mutual exclusion — refresh status
+      await fetchStatus();
     } catch (e) {
       console.error(e);
+      setStatus((s) => (s ? { ...s, talkModeEnabled: !enabled } : s));
+    } finally {
+      setToggling(null);
     }
   };
 
@@ -243,6 +254,7 @@ export function TrayMenu() {
               <Switch
                 checked={status?.voiceWakeEnabled ?? false}
                 onChange={(_, d) => handleVoiceWakeToggle(d.checked)}
+                disabled={toggling !== null}
               />
             </div>
 
@@ -290,6 +302,7 @@ export function TrayMenu() {
               <Switch
                 checked={status?.talkModeEnabled ?? false}
                 onChange={(_, d) => handleTalkModeToggle(d.checked)}
+                disabled={toggling !== null}
               />
             </div>
 

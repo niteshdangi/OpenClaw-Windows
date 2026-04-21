@@ -1,4 +1,10 @@
-import { makeStyles, tokens, Text, Tooltip } from "@fluentui/react-components";
+import {
+  makeStyles,
+  mergeClasses,
+  tokens,
+  Text,
+  Tooltip,
+} from "@fluentui/react-components";
 
 type PresenceState = "active" | "idle" | "stale";
 
@@ -30,13 +36,14 @@ const useStyles = makeStyles({
 
 export function StatusDot({ state, label }: StatusDotProps) {
   const styles = useStyles();
-  const dotClass = `${styles.dot} ${
+  const dotClass = mergeClasses(
+    styles.dot,
     state === "active"
       ? styles.active
       : state === "idle"
         ? styles.idle
         : styles.stale
-  }`;
+  );
   const tooltip =
     state === "active"
       ? "Active (< 2 min)"
@@ -47,7 +54,7 @@ export function StatusDot({ state, label }: StatusDotProps) {
   return (
     <Tooltip content={tooltip} relationship="label">
       <div className={styles.row}>
-        <div className={dotClass} aria-label={tooltip} />
+        <div className={dotClass} role="img" aria-label={tooltip} />
         {label && <Text className={styles.label}>{label}</Text>}
       </div>
     </Tooltip>

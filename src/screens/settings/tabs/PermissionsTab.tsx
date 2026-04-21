@@ -20,7 +20,6 @@ import {
   LocationArrowRegular,
   AlertUrgentRegular,
   ShieldLockRegular,
-  InfoRegular,
 } from "@fluentui/react-icons";
 import { StatusDot } from "../components/StatusDot";
 
@@ -359,22 +358,14 @@ export function PermissionsTab() {
               <div className={styles.allowlistContainer}>
                 {execSnapshot.file.allowlist.map((entry, i) => (
                   <div key={i} className={styles.allowlistEntry}>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
                       <code>{entry.pattern}</code>
                       <Caption1 className={styles.desc}>
                         Used {entry.useCount} times
+                        {entry.createdAt &&
+                          ` · Created ${new Date(entry.createdAt).toLocaleDateString()}`}
                       </Caption1>
                     </div>
-                    <Button
-                      size="small"
-                      appearance="subtle"
-                      icon={<InfoRegular />}
-                      onClick={() =>
-                        alert(
-                          `Created: ${new Date(entry.createdAt).toLocaleString()}\nPattern: ${entry.pattern}`
-                        )
-                      }
-                    />
                   </div>
                 ))}
               </div>

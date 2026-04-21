@@ -35,6 +35,7 @@ export function DebugTab() {
       localStorage.clear();
       sessionStorage.clear();
       setCacheStatus("Artifact cache cleared.");
+      setTimeout(() => setCacheStatus(null), 3000);
     } catch (err) {
       setCacheStatus(`Failed to clear cache: ${formatError(err)}`);
     } finally {

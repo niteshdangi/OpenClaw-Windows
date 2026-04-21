@@ -47,6 +47,31 @@ fn extract_token(content: &str) -> Option<String> {
 
 use crate::services::system::SystemService;
 
+/// Validate that an SSH identifier (user or host) contains only safe characters.
+fn validate_ssh_identifier(value: &str, field_name: &str) -> crate::error::Result<()> {
+    if value.is_empty() {
+        return Err(OpenClawError::Internal(format!(
+            "SSH {} cannot be empty",
+            field_name
+        )));
+    }
+    // Reject characters that could be used for SSH argument injection or shell tricks
+    if value.contains(|c: char| c.is_control() || " \t\n\r'\"\\;|&$`!(){}".contains(c)) {
+        return Err(OpenClawError::Internal(format!(
+            "SSH {} contains invalid characters",
+            field_name
+        )));
+    }
+    // Reject values that look like SSH flags (start with -)
+    if value.starts_with('-') {
+        return Err(OpenClawError::Internal(format!(
+            "SSH {} must not start with '-'",
+            field_name
+        )));
+    }
+    Ok(())
+}
+
 async fn fetch_token_from_ssh(
     system: &SystemService,
     user: &str,
@@ -54,6 +79,9 @@ async fn fetch_token_from_ssh(
     port: u16,
     key_path: Option<String>,
 ) -> crate::error::Result<String> {
+    validate_ssh_identifier(user, "user")?;
+    validate_ssh_identifier(host, "host")?;
+
     let mut args = vec![
         "-p".to_string(),
         port.to_string(),
@@ -63,9 +91,21 @@ async fn fetch_token_from_ssh(
         "ConnectTimeout=5".to_string(),
     ];
 
-    if let Some(path) = key_path {
+    if let Some(path) = &key_path {
+        let key = std::path::Path::new(path);
+        if !key.is_absolute() {
+            return Err(OpenClawError::Internal(
+                "SSH key path must be absolute".to_string(),
+            ));
+        }
+        if !key.exists() {
+            return Err(OpenClawError::Internal(format!(
+                "SSH key file not found: {}",
+                path
+            )));
+        }
         args.push("-i".to_string());
-        args.push(path);
+        args.push(path.clone());
     }
 
     args.push(format!("{}@{}", user, host));

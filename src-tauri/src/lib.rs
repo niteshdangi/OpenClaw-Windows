@@ -32,8 +32,8 @@ pub fn run() {
             Some(vec![]),
         ))
         .setup(|app| {
-            let log_dir = app.path().app_log_dir().expect("failed to get log dir");
-            std::fs::create_dir_all(&log_dir).expect("failed to create log dir");
+            let log_dir = app.path().app_log_dir()?;
+            std::fs::create_dir_all(&log_dir)?;
 
             let file_appender =
                 tracing_appender::rolling::daily(log_dir.clone(), "openclaw.log");
@@ -93,9 +93,14 @@ pub fn run() {
             let media_service = Arc::new(services::media::MediaService::new(media_provider));
 
             let audio_provider = Arc::new(providers::audio::RealAudioProvider);
-            let talk_service = Arc::new(services::talk::TalkService::new(audio_provider));
 
             let speech_provider = Arc::new(providers::speech::WindowsSpeechProvider::new());
+            let talk_service = Arc::new(services::talk::TalkService::new(
+                audio_provider,
+                speech_provider.clone(),
+                gateway_service.clone(),
+            ));
+
             let voice_wake_service = Arc::new(services::VoiceWakeService::new(
                 speech_provider,
                 gateway_service.clone(),
@@ -124,22 +129,19 @@ pub fn run() {
 
             let runtime_manager = services::runtime::RuntimeManager::new(app.handle().clone());
 
-            let rm = runtime_manager.clone();
-            let rm2 = runtime_manager.clone();
-            let rm3 = runtime_manager.clone();
-            let rm4 = runtime_manager.clone();
-            let rm5 = runtime_manager.clone();
-            let rm6 = runtime_manager.clone();
-
-            tauri::async_runtime::block_on(async move {
-                let _ = rm.register(media_service).await;
-                let _ = rm2.register(talk_service).await;
-                let _ = rm3
-                    .register(discovery_service)
-                    .await;
-                let _ = rm4.register(gateway_service).await;
-                let _ = rm5.register(voice_wake_service).await;
-                let _ = rm6.register(gateway_watcher_service).await;
+            tauri::async_runtime::block_on(async {
+                for (name, result) in [
+                    ("media", runtime_manager.clone().register(media_service).await),
+                    ("talk", runtime_manager.clone().register(talk_service).await),
+                    ("discovery", runtime_manager.clone().register(discovery_service).await),
+                    ("gateway", runtime_manager.clone().register(gateway_service).await),
+                    ("voice_wake", runtime_manager.clone().register(voice_wake_service).await),
+                    ("gateway_watcher", runtime_manager.clone().register(gateway_watcher_service).await),
+                ] {
+                    if let Err(e) = result {
+                        tracing::warn!("Failed to register {} service: {}", name, e);
+                    }
+                }
             });
 
             app.manage(runtime_manager);
@@ -248,6 +250,7 @@ pub fn run() {
             services::settings::channels_logout,
             services::instances::get_instances,
             services::sessions::get_sessions,
+            services::sessions::clear_session,
             services::skills::get_skills,
             services::skills::set_skill_enabled,
             services::skills::set_skill_env,
@@ -265,6 +268,9 @@ pub fn run() {
             services::settings::get_build_info,
             services::settings::clear_artifact_cache,
             services::settings::reset_setup,
+            services::settings::get_models,
+            services::settings::get_current_model,
+            services::settings::set_model,
             services::exec_approvals::resolve_exec_approval_handler,
             quit_app
         ])

@@ -16,6 +16,9 @@ import {
   LockClosedRegular,
   InfoRegular,
   BugRegular,
+  PlugConnectedRegular,
+  DocumentRegular,
+  AppsRegular,
 } from "@fluentui/react-icons";
 import { GeneralTab } from "./tabs/GeneralTab";
 import ChannelsTab from "./tabs/ChannelsTab";
@@ -51,11 +54,11 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: "general", label: "General", icon: <SettingsRegular /> },
-  // { id: "channels", label: "Channels", icon: <PlugConnectedRegular /> },
+  { id: "channels", label: "Channels", icon: <PlugConnectedRegular /> },
   { id: "voice-wake", label: "Voice Wake", icon: <MicRegular /> },
-  // { id: "config", label: "Config", icon: <DocumentRegular /> },
+  { id: "config", label: "Config", icon: <DocumentRegular /> },
   { id: "instances", label: "Instances", icon: <DesktopRegular /> },
-  // { id: "sessions", label: "Sessions", icon: <AppsRegular /> },
+  { id: "sessions", label: "Sessions", icon: <AppsRegular /> },
   { id: "cron", label: "Cron", icon: <ClockRegular /> },
   { id: "skills", label: "Skills", icon: <FlashRegular /> },
   { id: "permissions", label: "Permissions", icon: <LockClosedRegular /> },
@@ -181,11 +184,11 @@ export default function Settings() {
   const styles = useStyles();
 
   useEffect(() => {
-    // Re-read config on tab switch so Debug visibility updates immediately.
+    // Read config once on mount; debug visibility updates are handled via custom event below.
     invoke<{ debugPaneEnabled?: boolean }>("get_full_config")
       .then((cfg) => setShowDebug(cfg.debugPaneEnabled ?? false))
       .catch(() => {});
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
     const onDebugPaneChanged = (event: Event) => {

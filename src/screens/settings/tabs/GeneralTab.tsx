@@ -102,6 +102,15 @@ interface Config {
   automationBridgeEnabled?: boolean;
   debugPaneEnabled?: boolean;
 }
+
+interface ModelEntry {
+  id: string;
+  name: string;
+  provider: string;
+  alias?: string;
+  contextWindow?: number;
+  reasoning?: boolean;
+}
 interface Health {
   connected: boolean;
   error?: string;
@@ -125,6 +134,8 @@ export function GeneralTab() {
   const [remoteStatus, setRemoteStatus] = useState<RemoteStatus>("idle");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [models, setModels] = useState<ModelEntry[]>([]);
+  const [currentModel, setCurrentModel] = useState<string>("");
 
   const load = useCallback(async () => {
     try {
@@ -138,9 +149,23 @@ export function GeneralTab() {
     }
   }, []);
 
+  const loadModels = useCallback(async () => {
+    try {
+      const [modelList, modelVal] = await Promise.all([
+        invoke<ModelEntry[]>("get_models"),
+        invoke<string | null>("get_current_model"),
+      ]);
+      setModels(modelList ?? []);
+      setCurrentModel(modelVal ?? "");
+    } catch {
+      // Models may not be available if gateway is disconnected
+    }
+  }, []);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadModels();
+  }, [load, loadModels]);
 
   const save = useCallback(async (patch: Partial<Config>) => {
     // Optimistically apply UI changes, then serialize persistence writes.
@@ -246,13 +271,27 @@ export function GeneralTab() {
           <Text style={{ color: tokens.colorPaletteRedForeground1 }}>
             {error}
           </Text>
-          <Button
-            size="small"
-            appearance="subtle"
-            onClick={() => setError(null)}
-          >
-            Dismiss
-          </Button>
+          <div style={{ display: "flex", gap: "4px" }}>
+            <Button
+              size="small"
+              appearance="subtle"
+              onClick={() => {
+                setError(null);
+                load();
+                loadModels();
+                refreshHealth();
+              }}
+            >
+              Retry
+            </Button>
+            <Button
+              size="small"
+              appearance="subtle"
+              onClick={() => setError(null)}
+            >
+              Dismiss
+            </Button>
+          </div>
         </div>
       )}
 
@@ -265,6 +304,57 @@ export function GeneralTab() {
           checked={!(cfg.isPaused ?? false)}
           onChange={(v) => save({ isPaused: !v })}
         />
+
+        {models.length > 0 && (
+          <>
+            <div className={styles.divider} />
+            <div className={styles.modeRow}>
+              <Label style={{ minWidth: 80 }}>Model</Label>
+              <Dropdown
+                value={
+                  models.find(
+                    (m) =>
+                      `${m.provider}/${m.id}` === currentModel ||
+                      m.id === currentModel
+                  )?.name ?? currentModel || "Default"
+                }
+                selectedOptions={[currentModel]}
+                onOptionSelect={async (_, d) => {
+                  const val = d.optionValue ?? "";
+                  setCurrentModel(val);
+                  try {
+                    await invoke("set_model", { model: val });
+                  } catch (e) {
+                    setError(`Failed to set model: ${formatError(e)}`);
+                  }
+                }}
+                listbox={{
+                  style: { backgroundColor: tokens.colorNeutralBackground2 },
+                }}
+              >
+                {models.map((m) => {
+                  const key = `${m.provider}/${m.id}`;
+                  return (
+                    <Option key={key} value={key} text={m.name}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <span>{m.alias || m.name}</span>
+                        {m.reasoning && (
+                          <span className={styles.tagBadge}>reasoning</span>
+                        )}
+                      </div>
+                    </Option>
+                  );
+                })}
+              </Dropdown>
+            </div>
+          </>
+        )}
 
         <div className={styles.divider} />
 
@@ -291,6 +381,7 @@ export function GeneralTab() {
               <Input
                 placeholder="user@host[:22]"
                 value={cfg.remoteSshTarget ?? ""}
+                disabled={remoteStatus === "checking"}
                 onChange={(_, d) =>
                   setCfg((p) => ({ ...p, remoteSshTarget: d.value }))
                 }

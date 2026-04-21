@@ -793,6 +793,101 @@ pub async fn test_remote_connection(
     }
 }
 
+// Model selection commands.
+
+#[tauri::command]
+pub async fn get_models(
+    gateway_service: State<'_, Arc<GatewayService>>,
+) -> crate::error::Result<serde_json::Value> {
+    let req = json!({
+        "type": "req",
+        "id": req_id(),
+        "method": "models.list",
+        "params": {}
+    })
+    .to_string();
+    let result = gateway_service.request(req).await?;
+    Ok(result
+        .get("models")
+        .cloned()
+        .unwrap_or_else(|| Value::Array(vec![])))
+}
+
+#[tauri::command]
+pub async fn get_current_model(
+    gateway_service: State<'_, Arc<GatewayService>>,
+) -> crate::error::Result<serde_json::Value> {
+    let req = json!({
+        "type": "req",
+        "id": req_id(),
+        "method": "config.get",
+        "params": {}
+    })
+    .to_string();
+    let snapshot = gateway_service.request(req).await?;
+    // The model is at config.agents.defaults.model
+    let model = snapshot
+        .pointer("/config/agents/defaults/model")
+        .cloned()
+        .unwrap_or(Value::Null);
+    Ok(model)
+}
+
+#[tauri::command]
+pub async fn set_model(
+    model: String,
+    gateway_service: State<'_, Arc<GatewayService>>,
+) -> crate::error::Result<()> {
+    // Read current config, patch the model, write back
+    let snapshot_req = json!({
+        "type": "req",
+        "id": req_id(),
+        "method": "config.get",
+        "params": {}
+    })
+    .to_string();
+    let snapshot = gateway_service.request(snapshot_req).await?;
+
+    let mut config = snapshot
+        .get("config")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Map::new()));
+
+    // Set config.agents.defaults.model
+    let agents = config
+        .as_object_mut()
+        .unwrap()
+        .entry("agents")
+        .or_insert_with(|| Value::Object(Map::new()));
+    let defaults = agents
+        .as_object_mut()
+        .unwrap()
+        .entry("defaults")
+        .or_insert_with(|| Value::Object(Map::new()));
+    defaults
+        .as_object_mut()
+        .unwrap()
+        .insert("model".to_string(), Value::String(model));
+
+    let raw = serde_json::to_string_pretty(&config).map_err(|e| {
+        crate::error::OpenClawError::Internal(format!("Failed to encode config JSON: {}", e))
+    })?;
+    let mut params = Map::new();
+    params.insert("raw".to_string(), Value::String(raw));
+    if let Some(base_hash) = snapshot.get("hash").and_then(|v| v.as_str()) {
+        params.insert("baseHash".to_string(), Value::String(base_hash.to_string()));
+    }
+
+    let req = json!({
+        "type": "req",
+        "id": req_id(),
+        "method": "config.set",
+        "params": Value::Object(params)
+    })
+    .to_string();
+    gateway_service.request(req).await.map(|_| ())
+}
+
 // Config tab commands (read/write openclaw.json).
 
 #[tauri::command]

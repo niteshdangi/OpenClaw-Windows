@@ -164,3 +164,20 @@ pub async fn get_sessions(
 
     Ok(rows)
 }
+
+#[tauri::command]
+pub async fn clear_session(
+    key: String,
+    gateway_service: State<'_, Arc<GatewayService>>,
+) -> crate::error::Result<()> {
+    let req = json!({
+        "type": "req",
+        "id": req_id(),
+        "method": "sessions.clear",
+        "params": {
+            "key": key
+        }
+    })
+    .to_string();
+    gateway_service.request(req).await.map(|_| ())
+}

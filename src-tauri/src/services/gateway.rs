@@ -199,6 +199,63 @@ impl GatewayService {
         Ok(())
     }
 
+    /// After node reconnects, poll the gateway for any commands queued while offline.
+    async fn drain_pending_actions(_app: &AppHandle, gateway: &GatewayService) {
+        let req = serde_json::json!({
+            "id": format!("drain_{}", uuid::Uuid::new_v4().simple()),
+            "type": "req",
+            "method": "node.pending.drain",
+            "params": { "maxItems": 10 }
+        });
+
+        match gateway.request(req.to_string()).await {
+            Ok(res) => {
+                let items = res
+                    .get("items")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+
+                if items.is_empty() {
+                    tracing::debug!("[GatewayService] No pending actions to drain");
+                    return;
+                }
+
+                tracing::info!(
+                    "[GatewayService] Draining {} pending action(s)",
+                    items.len()
+                );
+
+                for item in &items {
+                    let item_type = item
+                        .get("type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+                    tracing::info!("[GatewayService] Pending action: {}", item_type);
+
+                    // Handle status.request by reporting device info
+                    if item_type == "status.request" {
+                        let info = crate::services::invoke::build_device_info();
+                        let event = serde_json::json!({
+                            "type": "event",
+                            "event": "node.event",
+                            "payload": {
+                                "kind": "device.status",
+                                "data": info
+                            }
+                        });
+                        let _ = gateway
+                            .send_node_response(event.to_string())
+                            .await;
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::debug!("[GatewayService] Failed to drain pending actions: {}", e);
+            }
+        }
+    }
+
     async fn ensure_device_setup(
         &self,
         config: &mut crate::models::config::Config,
@@ -418,6 +475,12 @@ impl GatewayService {
         Some(url.to_string())
     }
 
+    fn is_safe_ssh_identifier(s: &str) -> bool {
+        !s.is_empty()
+            && !s.starts_with('-')
+            && !s.contains(|c: char| c.is_control() || " \t\n\r'\"\\;|&$`!(){}".contains(c))
+    }
+
     fn parse_ssh_target(raw: &str) -> Option<SshTarget> {
         let trimmed = raw.trim();
         if trimmed.is_empty() {
@@ -436,7 +499,7 @@ impl GatewayService {
 
         let user = raw_user
             .map(str::trim)
-            .filter(|u| !u.is_empty())
+            .filter(|u| !u.is_empty() && Self::is_safe_ssh_identifier(u))
             .map(ToString::to_string);
 
         if host_port.starts_with('[') {
@@ -463,7 +526,7 @@ impl GatewayService {
         if let Some((host, port_str)) = host_port.rsplit_once(':') {
             if let Ok(port) = port_str.parse::<u16>() {
                 let host = host.trim();
-                if host.is_empty() {
+                if host.is_empty() || !Self::is_safe_ssh_identifier(host) {
                     return None;
                 }
                 return Some(SshTarget {
@@ -472,6 +535,10 @@ impl GatewayService {
                     port,
                 });
             }
+        }
+
+        if !Self::is_safe_ssh_identifier(host_port) {
+            return None;
         }
 
         Some(SshTarget {
@@ -791,6 +858,18 @@ impl GatewayService {
             self.emit_status_event().await;
         }
 
+        // After node connects, drain any pending actions queued while offline
+        if role == GatewayRole::Node {
+            let app_for_drain = app.clone();
+            let self_for_drain = app_for_drain
+                .state::<Arc<GatewayService>>()
+                .inner()
+                .clone();
+            tokio::spawn(async move {
+                Self::drain_pending_actions(&app_for_drain, &self_for_drain).await;
+            });
+        }
+
         let state = self.state.clone();
         let events = self.events.clone();
 
@@ -825,6 +904,19 @@ impl GatewayService {
                                                 let mut s = state.lock().await;
                                                 if let Some(tx) = s.pending_responses.remove(id) {
                                                     let _ = tx.send(json.clone());
+                                                }
+                                            }
+                                        }
+                                        // Forward gateway broadcast events to frontend
+                                        if json["type"] == "event" {
+                                            if let Some(event_name) = json["event"].as_str() {
+                                                match event_name {
+                                                    "config.changed" | "sessions.changed" |
+                                                    "session.message" | "cron.changed" |
+                                                    "skills.changed" => {
+                                                        let _ = events.emit(event_name, json.get("payload").cloned().unwrap_or_default());
+                                                    }
+                                                    _ => {}
                                                 }
                                             }
                                         }
