@@ -358,7 +358,13 @@ export function PermissionsTab() {
               <div className={styles.allowlistContainer}>
                 {execSnapshot.file.allowlist.map((entry, i) => (
                   <div key={i} className={styles.allowlistEntry}>
-                    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: 1,
+                      }}
+                    >
                       <code>{entry.pattern}</code>
                       <Caption1 className={styles.desc}>
                         Used {entry.useCount} times

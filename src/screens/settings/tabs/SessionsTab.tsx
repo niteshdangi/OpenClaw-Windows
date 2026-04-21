@@ -12,6 +12,8 @@ import {
   ArrowClockwise20Regular,
   Delete20Regular,
 } from "@fluentui/react-icons";
+import { formatError } from "../../../utils/error";
+
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", gap: "12px" },
   header: {
@@ -143,25 +145,24 @@ export function SessionsTab() {
 
   useEffect(() => {
     refresh();
-        const unlisten = listen("sessions.changed", () => {
-            refresh();
-        });
-        return () => {
-            unlisten.then((f) => f());
-        };
-    }, [refresh]);
+    const unlisten = listen("sessions.changed", () => {
+      refresh();
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [refresh]);
 
-    const clearSession = useCallback(
-        async (key: string) => {
-            try {
-                await invoke("clear_session", { key });
-                setSessions((prev) => prev.filter((s) => s.key !== key));
-            } catch (e) {
-                setError(formatError(e, "Failed to clear session"));
-            }
-        },
-        []
-    );
+  const clearSession = useCallback(async (key: string) => {
+    try {
+      await invoke("clear_session", { key });
+      setSessions((prev) => prev.filter((s) => s.key !== key));
+    } catch (e) {
+      setError(formatError(e, "Failed to clear session"));
+    }
+  }, []);
+
+  return (
     <div className={styles.root}>
       <div className={styles.header}>
         <div className={styles.titleBlock}>
@@ -234,16 +235,30 @@ export function SessionsTab() {
               >
                 {sess.label || sess.key}
               </Text>
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <Text className={styles.age}>{ageText(sess.updatedAt)}</Text>
-                                <Button
-                                    appearance="subtle"
-                                    size="small"
-                                    icon={<Delete20Regular />}
-                                    title="Clear session"
-                                    onClick={() => clearSession(sess.key)}
-                                />
-                            </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+              >
+                <Text className={styles.age}>{ageText(sess.updatedAt)}</Text>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<Delete20Regular />}
+                  title="Clear session"
+                  onClick={() => clearSession(sess.key)}
+                />
+              </div>
+            </div>
+
+            {(sess.kind || (sess.flags && sess.flags.length > 0)) && (
+              <div className={styles.badges}>
+                {sess.kind && (
+                  <span
+                    className={styles.badge}
+                    style={{
+                      backgroundColor: tokens.colorNeutralBackground5,
+                      color: kindColor(sess.kind),
+                    }}
+                  >
                     {sess.kind.toUpperCase()}
                   </span>
                 )}

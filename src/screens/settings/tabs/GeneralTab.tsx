@@ -312,11 +312,13 @@ export function GeneralTab() {
               <Label style={{ minWidth: 80 }}>Model</Label>
               <Dropdown
                 value={
-                  models.find(
+                  (models.find(
                     (m) =>
                       `${m.provider}/${m.id}` === currentModel ||
                       m.id === currentModel
-                  )?.name ?? currentModel || "Default"
+                  )?.name ??
+                    currentModel) ||
+                  "Default"
                 }
                 selectedOptions={[currentModel]}
                 onOptionSelect={async (_, d) => {

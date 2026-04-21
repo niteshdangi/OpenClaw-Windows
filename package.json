@@ -2,7 +2,7 @@
   "name": "openclaw-windows",
   "description": "Desktop companion app for OpenClaw on Windows",
   "private": false,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
