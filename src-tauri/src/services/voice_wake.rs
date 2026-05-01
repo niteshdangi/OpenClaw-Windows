@@ -21,7 +21,7 @@ struct VoiceAgentTracker {
     active_runs: HashSet<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct WakeCaptureState {
     active: bool,
     generation: u64,
@@ -46,24 +46,6 @@ struct WakePreDetectState {
 enum WakePreDetectMode {
     TriggerOnly(String),
     TextFallback,
-}
-
-impl Default for WakeCaptureState {
-    fn default() -> Self {
-        Self {
-            active: false,
-            generation: 0,
-            token: String::new(),
-            started_at: None,
-            last_heard: None,
-            heard_beyond_trigger: false,
-            trigger_phrase: String::new(),
-            captured_transcript: String::new(),
-            committed_transcript: String::new(),
-            volatile_transcript: String::new(),
-            cooldown_until: None,
-        }
-    }
 }
 
 const WAKE_SILENCE_WINDOW: Duration = Duration::from_secs(2);
@@ -320,6 +302,7 @@ impl VoiceWakeService {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn spawn_wake_capture_monitor(
         app: AppHandle,
         wake_capture: Arc<std::sync::Mutex<WakeCaptureState>>,
@@ -525,6 +508,7 @@ impl VoiceWakeService {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn finalize_wake_capture(
         app: AppHandle,
         wake_capture: Arc<std::sync::Mutex<WakeCaptureState>>,
@@ -586,6 +570,7 @@ impl VoiceWakeService {
         .await;
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn emit_agent_state(
         app: &AppHandle,
         phase: &str,
@@ -892,12 +877,10 @@ impl VoiceWakeService {
                 let error_text = data
                     .get("error")
                     .and_then(|v| v.as_str())
-                    .unwrap_or_else(|| {
-                        if summary.is_empty() {
-                            "Voice agent run failed."
-                        } else {
-                            summary.as_str()
-                        }
+                    .unwrap_or(if summary.is_empty() {
+                        "Voice agent run failed."
+                    } else {
+                        summary.as_str()
                     })
                     .to_string();
                 let _ = Self::complete_tracked_run(self.agent_tracker.clone(), &run_id).await;
@@ -1053,12 +1036,10 @@ impl VoiceWakeService {
                 .and_then(|v| v.get("message"))
                 .and_then(|v| v.as_str())
                 .or_else(|| frame.get("error").and_then(|v| v.as_str()))
-                .unwrap_or_else(|| {
-                    if summary.is_empty() {
-                        "Voice agent request failed."
-                    } else {
-                        summary.as_str()
-                    }
+                .unwrap_or(if summary.is_empty() {
+                    "Voice agent request failed."
+                } else {
+                    summary.as_str()
                 })
                 .to_string();
             let _ = Self::complete_tracked_request(self.agent_tracker.clone(), &request_id).await;

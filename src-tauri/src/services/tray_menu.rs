@@ -91,7 +91,7 @@ pub async fn toggle_tray_menu_inner(
     });
 
     let (m_pos, m_size, m_scale) = if let Some(m) = monitor {
-        (m.position().clone(), m.size().clone(), m.scale_factor())
+        (*m.position(), *m.size(), m.scale_factor())
     } else {
         (
             PhysicalPosition::new(0, 0),

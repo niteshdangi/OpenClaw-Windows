@@ -34,7 +34,7 @@ pub struct RealSystemProvider;
 impl SystemProvider for RealSystemProvider {
     fn get_accent_color(&self) -> Option<(u8, u8, u8, String)> {
         let output = std::process::Command::new("reg")
-            .args(&[
+            .args([
                 "query",
                 "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\DWM",
                 "/v",
@@ -102,7 +102,7 @@ impl SystemProvider for RealSystemProvider {
     }
     fn kill_process_tree(&self, pid: u32) -> crate::error::Result<()> {
         std::process::Command::new("taskkill")
-            .args(&["/PID", &pid.to_string(), "/F", "/T"])
+            .args(["/PID", &pid.to_string(), "/F", "/T"])
             .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .output()
             .map_err(|e| OpenClawError::Internal(format!("Failed to kill process tree: {}", e)))?;

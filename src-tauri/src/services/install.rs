@@ -68,17 +68,15 @@ impl WslInstallService {
             let events_clone = self.events.clone();
             std::thread::spawn(move || {
                 let reader = BufReader::new(stdout);
-                for line in reader.lines() {
-                    if let Ok(l) = line {
-                        let _ = events_clone.emit(
-                            "install-status",
-                            InstallStatus {
-                                step: "wsl".to_string(),
-                                status: "installing".to_string(),
-                                message: Some(l),
-                            },
-                        );
-                    }
+                for l in reader.lines().map_while(Result::ok) {
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "wsl".to_string(),
+                            status: "installing".to_string(),
+                            message: Some(l),
+                        },
+                    );
                 }
             });
 
@@ -155,67 +153,65 @@ fi
             let reader = BufReader::new(stdout);
             let mut current_phase = "system";
 
-            for line in reader.lines() {
-                if let Ok(l) = line {
-                    let lower = l.to_lowercase();
+            for l in reader.lines().map_while(Result::ok) {
+                let lower = l.to_lowercase();
 
-                    if l.contains("[1/3] Preparing environment") {
-                        let _ = events_clone.emit(
-                            "install-status",
-                            InstallStatus {
-                                step: "system".to_string(),
-                                status: "installing".to_string(),
-                                message: Some("Preparing environment...".to_string()),
-                            },
-                        );
-                    } else if l.contains("[2/3] Installing OpenClaw") {
-                        let _ = events_clone.emit(
-                            "install-status",
-                            InstallStatus {
-                                step: "system".to_string(),
-                                status: "installed".to_string(),
-                                message: None,
-                            },
-                        );
-                        current_phase = "openclaw";
+                if l.contains("[1/3] Preparing environment") {
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "system".to_string(),
+                            status: "installing".to_string(),
+                            message: Some("Preparing environment...".to_string()),
+                        },
+                    );
+                } else if l.contains("[2/3] Installing OpenClaw") {
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "system".to_string(),
+                            status: "installed".to_string(),
+                            message: None,
+                        },
+                    );
+                    current_phase = "openclaw";
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "openclaw".to_string(),
+                            status: "installing".to_string(),
+                            message: Some("Installing CLI...".to_string()),
+                        },
+                    );
+                } else if l.contains("[3/3] Finalizing setup") {
+                    if current_phase == "openclaw" {
                         let _ = events_clone.emit(
                             "install-status",
                             InstallStatus {
                                 step: "openclaw".to_string(),
-                                status: "installing".to_string(),
-                                message: Some("Installing CLI...".to_string()),
-                            },
-                        );
-                    } else if l.contains("[3/3] Finalizing setup") {
-                        if current_phase == "openclaw" {
-                            let _ = events_clone.emit(
-                                "install-status",
-                                InstallStatus {
-                                    step: "openclaw".to_string(),
-                                    status: "installed".to_string(),
-                                    message: None,
-                                },
-                            );
-                        }
-                        current_phase = "doctor";
-                        let _ = events_clone.emit(
-                            "install-status",
-                            InstallStatus {
-                                step: "doctor".to_string(),
-                                status: "installing".to_string(),
-                                message: Some("Finalizing setup...".to_string()),
-                            },
-                        );
-                    } else if lower.contains("openclaw installed successfully") {
-                        let _ = events_clone.emit(
-                            "install-status",
-                            InstallStatus {
-                                step: "doctor".to_string(),
                                 status: "installed".to_string(),
                                 message: None,
                             },
                         );
                     }
+                    current_phase = "doctor";
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "doctor".to_string(),
+                            status: "installing".to_string(),
+                            message: Some("Finalizing setup...".to_string()),
+                        },
+                    );
+                } else if lower.contains("openclaw installed successfully") {
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "doctor".to_string(),
+                            status: "installed".to_string(),
+                            message: None,
+                        },
+                    );
                 }
             }
         });

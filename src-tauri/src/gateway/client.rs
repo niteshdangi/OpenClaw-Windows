@@ -77,6 +77,7 @@ fn connection_profile_changed(before: &Config, after: &Config) -> bool {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn connect_gateway(
     app: AppHandle,
     address: String,
