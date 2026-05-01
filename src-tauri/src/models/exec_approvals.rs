@@ -57,7 +57,7 @@ impl Default for ExecAgentSettings {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecApprovalsFile {
     pub global: ExecAgentSettings,
@@ -67,17 +67,6 @@ pub struct ExecApprovalsFile {
     pub allowlist: Vec<ExecAllowlistEntry>,
     #[serde(default)]
     pub global_allowlist: Vec<ExecAllowlistEntry>,
-}
-
-impl Default for ExecApprovalsFile {
-    fn default() -> Self {
-        Self {
-            global: ExecAgentSettings::default(),
-            agents: HashMap::new(),
-            allowlist: Vec::new(),
-            global_allowlist: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

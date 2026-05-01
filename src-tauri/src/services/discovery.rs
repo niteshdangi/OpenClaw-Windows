@@ -79,6 +79,12 @@ impl DiscoveryService {
     }
 }
 
+impl Default for DiscoveryService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn classify_gateway(address: &str) -> String {
     if let Ok(ip) = address.parse::<IpAddr>() {
         match ip {

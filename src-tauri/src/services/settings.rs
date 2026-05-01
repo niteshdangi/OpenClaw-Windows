@@ -710,7 +710,7 @@ pub async fn test_remote_connection(
 
     if let Err(e) = socket
         .send(tokio_tungstenite::tungstenite::Message::Text(
-            connect_req.to_string().into(),
+            connect_req.to_string(),
         ))
         .await
     {

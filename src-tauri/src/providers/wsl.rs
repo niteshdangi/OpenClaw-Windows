@@ -20,7 +20,7 @@ pub struct RealWslProvider;
 impl WslProvider for RealWslProvider {
     fn get_status(&self) -> bool {
         let output = Command::new("wsl")
-            .args(&["--status"])
+            .args(["--status"])
             .creation_flags(CREATE_NO_WINDOW)
             .output();
 
@@ -32,7 +32,7 @@ impl WslProvider for RealWslProvider {
 
     fn get_distro(&self) -> Option<String> {
         let output = Command::new("wsl")
-            .args(&["-l", "-q"])
+            .args(["-l", "-q"])
             .creation_flags(CREATE_NO_WINDOW)
             .output();
 
@@ -54,8 +54,7 @@ impl WslProvider for RealWslProvider {
                 stdout
                     .lines()
                     .map(|l| l.trim().trim_matches('\0'))
-                    .filter(|l| !l.is_empty() && !l.contains("Default Version"))
-                    .next()
+                    .find(|l| !l.is_empty() && !l.contains("Default Version"))
                     .map(|s| s.to_string())
             }
             Err(_) => None,

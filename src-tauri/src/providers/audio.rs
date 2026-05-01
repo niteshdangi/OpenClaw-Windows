@@ -4,6 +4,7 @@ pub trait AudioHandle: Send + Sync {
 }
 
 pub trait AudioProvider: Send + Sync {
+    #[allow(clippy::type_complexity)]
     fn build_input_stream(
         &self,
         callback: Box<dyn FnMut(&[f32]) + Send + 'static>,

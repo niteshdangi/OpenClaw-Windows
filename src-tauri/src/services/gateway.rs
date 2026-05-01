@@ -458,9 +458,7 @@ impl GatewayService {
             _ => return None,
         }
 
-        if url.host_str().is_none() {
-            return None;
-        }
+        url.host_str()?;
 
         if url.port().is_none() {
             let default_port = match url.scheme() {

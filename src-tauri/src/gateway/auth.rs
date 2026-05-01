@@ -24,6 +24,7 @@ fn get_device_name() -> String {
         .unwrap_or_else(|_| "Windows PC".to_string())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn sign_nonce(
     device_id: &str,
     private_key: &[u8],

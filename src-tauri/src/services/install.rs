@@ -68,17 +68,15 @@ impl WslInstallService {
             let events_clone = self.events.clone();
             std::thread::spawn(move || {
                 let reader = BufReader::new(stdout);
-                for line in reader.lines() {
-                    if let Ok(l) = line {
-                        let _ = events_clone.emit(
-                            "install-status",
-                            InstallStatus {
-                                step: "wsl".to_string(),
-                                status: "installing".to_string(),
-                                message: Some(l),
-                            },
-                        );
-                    }
+                for l in reader.lines().flatten() {
+                    let _ = events_clone.emit(
+                        "install-status",
+                        InstallStatus {
+                            step: "wsl".to_string(),
+                            status: "installing".to_string(),
+                            message: Some(l),
+                        },
+                    );
                 }
             });
 
@@ -155,8 +153,7 @@ fi
             let reader = BufReader::new(stdout);
             let mut current_phase = "system";
 
-            for line in reader.lines() {
-                if let Ok(l) = line {
+            for l in reader.lines().flatten() {
                     let lower = l.to_lowercase();
 
                     if l.contains("[1/3] Preparing environment") {
@@ -216,7 +213,6 @@ fi
                             },
                         );
                     }
-                }
             }
         });
 

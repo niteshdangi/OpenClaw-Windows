@@ -50,6 +50,12 @@ pub struct WindowsSpeechProvider {
     recognizer: Mutex<Option<SpeechRecognizer>>,
 }
 
+impl Default for WindowsSpeechProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WindowsSpeechProvider {
     pub fn new() -> Self {
         Self {
@@ -219,7 +225,7 @@ impl SpeechProvider for WindowsSpeechProvider {
                 Duration: 10_i64 * 10_000_000, // 10s
             });
             let _ = timeouts.SetEndSilenceTimeout(TimeSpan {
-                Duration: 1_i64 * 10_000_000, // 1s
+                Duration: 10_000_000_i64, // 1s
             });
             let _ = timeouts.SetBabbleTimeout(TimeSpan {
                 Duration: 30_i64 * 10_000_000, // 30s
