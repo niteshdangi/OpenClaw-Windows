@@ -4,7 +4,7 @@ use crate::services::{ConfigService, EventDispatcher};
 use async_trait::async_trait;
 use ed25519_dalek::SigningKey;
 use futures_util::{SinkExt, StreamExt};
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 use serde::Serialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
