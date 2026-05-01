@@ -35,7 +35,8 @@ tokio-tungstenite = "0.20"
 tungstenite = "0.20"
 futures-util = "0.3"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
-rand = "0.8"
+rand = "0.9"
+rand_core = "0.6"
 base64 = "0.21"
 uuid = { version = "1", features = ["v4"] }
 anyhow = "1"
